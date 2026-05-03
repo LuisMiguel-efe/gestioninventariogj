@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String      @id
+  nombre            String
+  email             String?
+  rol               String
+  departamento      String
+  activo            Boolean     @default(true)
+  ownedAssets       Asset[]     @relation("AssetOwner")
+  movements         Movement[]  @relation("MovementUser")
+  registeredMovements Movement[] @relation("MovementRegistrar")
+}
+
+model Asset {
+  id                 Int       @id @default(autoincrement())
+  codigo             String    @unique
+  tipo               String
+  marca              String
+  modelo             String
+  estado             String
+  disponibilidad      String
+  ubicacion          String
+  propietarioId      String?   
+  propietario        User?     @relation("AssetOwner", fields: [propietarioId], references: [id])
+  fechaAdquisicion   DateTime?
+  notas              String?
+  identificador      String?
+  procesador         String?
+  detallesAdicionales String?
+  movements          Movement[]
+}
+
+model Movement {
+  id              Int      @id @default(autoincrement())
+  assetId         Int
+  userId          String
+  registradoPorId String
+  tipo            String
+  fecha           DateTime
+  notas           String?
+  assetAnteriorId Int?
+
+  asset           Asset    @relation(fields: [assetId], references: [id])
+  user            User     @relation("MovementUser", fields: [userId], references: [id])
+  registradoPor   User     @relation("MovementRegistrar", fields: [registradoPorId], references: [id])
+}

@@ -1,8 +1,18 @@
 import React from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
-import { LayoutDashboard, Laptop, Users, Activity } from 'lucide-react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Laptop, Users, Activity, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import Footer from './Footer';
 
 const Layout: React.FC = () => {
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
@@ -26,19 +36,64 @@ const Layout: React.FC = () => {
           </div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
           <SidebarLink to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" />
           <SidebarLink to="/assets" icon={<Laptop size={20} />} label="Gestión de Activos" />
           <SidebarLink to="/users" icon={<Users size={20} />} label="Empleados" />
           <SidebarLink to="/movements" icon={<Activity size={20} />} label="Movimientos & Actas" />
         </nav>
+
+        {/* User Info and Logout */}
+        <div style={{
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          paddingTop: '16px',
+          marginTop: '16px'
+        }}>
+          <div style={{
+            fontSize: '12px',
+            color: 'var(--text-secondary)',
+            marginBottom: '12px',
+            paddingLeft: '8px'
+          }}>
+            Usuario: <strong>{user}</strong>
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              backgroundColor: '#fee',
+              color: '#c00',
+              border: '1px solid #fcc',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              fontSize: '14px'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#fdd';
+              e.currentTarget.style.borderColor = '#faa';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#fee';
+              e.currentTarget.style.borderColor = '#fcc';
+            }}
+          >
+            <LogOut size={18} />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content Area */}
       <main style={{
         flex: 1,
         marginLeft: '292px', // 260 width + 16 margin * 2
-        padding: '24px 32px 24px 0'
+        padding: '24px 32px 80px 0'
       }}>
         <div className="glass-panel" style={{
           padding: '32px',
@@ -47,6 +102,7 @@ const Layout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

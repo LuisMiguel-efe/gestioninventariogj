@@ -13,7 +13,7 @@ export default async function handler(req, res) {
       const movement = await prisma.movement.create({
         data: {
           assetId: Number(data.assetId),
-          userId: data.userId,
+          userId: String(data.userId),
           registradoPorId: data.registradoPorId,
           tipo: data.tipo,
           fecha: new Date(data.fecha),

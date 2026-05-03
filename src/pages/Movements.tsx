@@ -92,7 +92,7 @@ const Movements: React.FC = () => {
 
     const newMovement = {
       ...formData,
-      registradoPorId: '1', // Simulated current connected admin user
+      registradoPorId: '94152348', // Simulated current connected admin user
       fecha: new Date().toISOString()
     };
 

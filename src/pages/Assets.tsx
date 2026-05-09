@@ -85,7 +85,7 @@ const Assets: React.FC = () => {
           <h2 style={{ marginBottom: '16px' }}>{formData.id ? 'Editar' : 'Crear'} Activo</h2>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="input-group">
-              <label className="input-label">Código (Serial/Plaqueta)</label>
+              <label className="input-label">Código (Serial/IMEI)</label>
               <input required className="input-field" value={formData.codigo} onChange={e => setFormData({ ...formData, codigo: e.target.value })} />
             </div>
             <div className="input-group">
@@ -104,6 +104,12 @@ const Assets: React.FC = () => {
                 <option value="accesorio">Accesorio</option>
 
               </select>
+              if (formData.tipo === 'Teléfono')  mostrar campo para número telefónico{
+                <div className="input-group">
+                  <label className="input-label">Línea telefónica</label>
+                  <input className="input-field" value={formData.numeroTelefonico || ''} onChange={e => setFormData({ ...formData, numeroTelefonico: e.target.value })} />
+                </div>
+              }
             </div>
             <div className="input-group">
                <label className="input-label">Marca</label>

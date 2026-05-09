@@ -97,8 +97,12 @@ const Assets: React.FC = () => {
               <select className="input-field" value={formData.tipo} onChange={e => setFormData({ ...formData, tipo: e.target.value })}>
                 <option value="laptop">Laptop</option>
                 <option value="desktop">Desktop</option>
+                <option value="monitor">Monitor</option>
+                <option value="tablet">Tablet</option>
+                <option value="telefono">Teléfono</option>
                 <option value="impresora">Impresora</option>
                 <option value="accesorio">Accesorio</option>
+
               </select>
             </div>
             <div className="input-group">

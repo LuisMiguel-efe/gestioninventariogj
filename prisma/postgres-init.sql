@@ -41,3 +41,36 @@ CREATE TABLE IF NOT EXISTS movements (
   CONSTRAINT fk_movements_user FOREIGN KEY (user_id) REFERENCES users(id),
   CONSTRAINT fk_movements_registrado_por FOREIGN KEY (registrado_por_id) REFERENCES users(id)
 );
+CREATE TABLE IF NOT EXISTS repairs (
+  id SERIAL PRIMARY KEY,
+  asset_id INT NOT NULL,
+  fecha_reparacion TIMESTAMP NOT NULL,
+  descripcion TEXT NOT NULL,
+  costo DECIMAL(10, 2),
+  proveedor TEXT,
+  notas TEXT,
+  CONSTRAINT fk_repairs_asset FOREIGN KEY (asset_id) REFERENCES assets(id)
+);
+
+CREATE TABLE IF NOT EXISTS maintenance (
+  id SERIAL PRIMARY KEY,
+  asset_id INT NOT NULL,
+  fecha_mantenimiento TIMESTAMP NOT NULL,
+  descripcion TEXT NOT NULL,
+  costo DECIMAL(10, 2),
+  proveedor TEXT,
+  notas TEXT,
+  CONSTRAINT fk_maintenance_asset FOREIGN KEY (asset_id) REFERENCES assets(id)
+);
+
+CREATE TABLE IF NOT EXISTS mobile_lines (
+  id SERIAL PRIMARY KEY,
+  numero TEXT NOT NULL UNIQUE,
+  operador TEXT NOT NULL,
+  plan TEXT NOT NULL,
+  estado TEXT NOT NULL,
+  propietario_id TEXT,
+  fecha_adquisicion TIMESTAMP,
+  notas TEXT,
+  CONSTRAINT fk_mobile_lines_propietario FOREIGN KEY (propietario_id) REFERENCES users(id)
+)

@@ -1,61 +1,81 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Laptop, Users, Activity, LogOut } from 'lucide-react';
+import { LayoutDashboard, Laptop, Users, Activity, LogOut, Wifi } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import Footer from './Footer';
 
 const Layout: React.FC = () => {
-  const { logout, user } = useAuth();
+  const { logout, sessionUser } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Sidebar */}
-      <aside className="glass-panel" style={{
+      <aside style={{
         width: '260px',
-        margin: '16px',
-        padding: '24px 16px',
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #012a5e 0%, #023e8a 60%, #0052a5 100%)',
         display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
         top: 0,
-        bottom: 0
+        bottom: 0,
+        left: 0,
+        zIndex: 50,
+        boxShadow: '4px 0 24px rgba(1,42,94,0.18)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', padding: '0 8px' }}>
-          <div style={{ padding: '2px', borderRadius: '3px' }}>
-            <img src="logogj.png" alt="logo" width={42} height={48} />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.1rem', margin: 0, lineHeight: 1.2 }}>Administraciones</h1>
-            <h1 style={{ fontSize: '1.3rem', margin: 0, lineHeight: 1, color: 'var(--primary-main)' }}>GJ</h1>
+        {/* Logo */}
+        <div style={{ padding: '28px 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '12px', padding: '6px' }}>
+              <img src="/logogj.png" alt="GJ Logo" width={36} height={40} style={{ display: 'block' }} />
+            </div>
+            <div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Administraciones
+              </div>
+              <div style={{ color: '#ffffff', fontSize: '1.5rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', lineHeight: 1 }}>
+                GJ
+              </div>
+            </div>
           </div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-          <SidebarLink to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" />
-          <SidebarLink to="/assets" icon={<Laptop size={20} />} label="Gestión de Activos" />
-          <SidebarLink to="/users" icon={<Users size={20} />} label="Empleados" />
-          <SidebarLink to="/movements" icon={<Activity size={20} />} label="Movimientos & Actas" />
+        {/* Navigation */}
+        <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }}>
+          <NavSection label="Principal">
+            <SidebarLink to="/" icon={<LayoutDashboard size={18} />} label="Dashboard" end />
+          </NavSection>
+
+          <NavSection label="Inventario">
+            <SidebarLink to="/assets" icon={<Laptop size={18} />} label="Activos" />
+            <SidebarLink to="/phonelines" icon={<Wifi size={18} />} label="Líneas Móviles" />
+          </NavSection>
+
+          <NavSection label="Gestión">
+            <SidebarLink to="/users" icon={<Users size={18} />} label="Empleados" />
+            <SidebarLink to="/movements" icon={<Activity size={18} />} label="Movimientos & Actas" />
+          </NavSection>
         </nav>
 
-        {/* User Info and Logout */}
-        <div style={{
-          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
-          paddingTop: '16px',
-          marginTop: '16px'
-        }}>
+        {/* User info + logout */}
+        <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{
-            fontSize: '12px',
-            color: 'var(--text-secondary)',
-            marginBottom: '12px',
-            paddingLeft: '8px'
+            background: 'rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            padding: '12px 14px',
+            marginBottom: '10px',
           }}>
-            Usuario: <strong>{user}</strong>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+              Sesión activa
+            </div>
+            <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.3 }}>
+              {sessionUser?.nombre || 'Usuario'}
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginTop: '2px' }}>
+              {sessionUser?.rol === 'administrador' ? '🔑 Administrador' : '👤 Empleado'} · C.C. {sessionUser?.cedula}
+            </div>
           </div>
           <button
             onClick={handleLogout}
@@ -63,72 +83,76 @@ const Layout: React.FC = () => {
               width: '100%',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              backgroundColor: '#fee',
-              color: '#c00',
-              border: '1px solid #fcc',
-              borderRadius: '12px',
+              gap: '10px',
+              padding: '10px 14px',
+              background: 'rgba(229, 62, 62, 0.12)',
+              color: '#fc8181',
+              border: '1px solid rgba(229,62,62,0.25)',
+              borderRadius: '10px',
               cursor: 'pointer',
               fontWeight: 600,
+              fontSize: '0.85rem',
               transition: 'all 0.2s',
-              fontSize: '14px'
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#fdd';
-              e.currentTarget.style.borderColor = '#faa';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = '#fee';
-              e.currentTarget.style.borderColor = '#fcc';
-            }}
+            onMouseOver={e => { e.currentTarget.style.background = 'rgba(229,62,62,0.22)'; }}
+            onMouseOut={e => { e.currentTarget.style.background = 'rgba(229,62,62,0.12)'; }}
           >
-            <LogOut size={18} />
+            <LogOut size={16} />
             <span>Cerrar Sesión</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main style={{
-        flex: 1,
-        marginLeft: '292px', // 260 width + 16 margin * 2
-        padding: '24px 32px 80px 0'
-      }}>
-        <div className="glass-panel" style={{
-          padding: '32px',
-          minHeight: 'calc(100vh - 48px)'
-        }}>
+      {/* Main Content */}
+      <main style={{ flex: 1, marginLeft: '260px', padding: '28px 32px', minHeight: '100vh' }}>
+        <div className="animate-fade-in">
           <Outlet />
         </div>
       </main>
-      <Footer />
     </div>
   );
 };
 
-const SidebarLink: React.FC<{ to: string, icon: React.ReactNode, label: string }> = ({ to, icon, label }) => {
-  return (
-    <NavLink
-      to={to}
-      style={({ isActive }) => ({
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '12px 16px',
-        textDecoration: 'none',
-        borderRadius: '12px',
-        color: isActive ? 'var(--primary-dark)' : 'var(--text-secondary)',
-        backgroundColor: isActive ? 'rgba(0, 119, 182, 0.1)' : 'transparent',
-        fontWeight: isActive ? 600 : 500,
-        transition: 'all 0.2s',
-      })}
-      className="sidebar-link"
-    >
-      {icon}
-      <span>{label}</span>
-    </NavLink>
-  );
-};
+const NavSection: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div style={{ marginBottom: '8px' }}>
+    <div style={{
+      color: 'rgba(255,255,255,0.35)',
+      fontSize: '0.65rem',
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '0.1em',
+      padding: '12px 8px 6px',
+    }}>
+      {label}
+    </div>
+    {children}
+  </div>
+);
+
+const SidebarLink: React.FC<{ to: string; icon: React.ReactNode; label: string; end?: boolean }> = ({ to, icon, label, end }) => (
+  <NavLink
+    to={to}
+    end={end}
+    className="sidebar-link"
+    style={({ isActive }) => ({
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      padding: '10px 12px',
+      textDecoration: 'none',
+      borderRadius: '10px',
+      color: isActive ? '#ffffff' : 'rgba(255,255,255,0.6)',
+      backgroundColor: isActive ? 'rgba(255,255,255,0.14)' : 'transparent',
+      fontWeight: isActive ? 600 : 500,
+      fontSize: '0.875rem',
+      transition: 'all 0.2s',
+      borderLeft: isActive ? '3px solid #38b6ff' : '3px solid transparent',
+      marginBottom: '2px',
+    })}
+  >
+    {icon}
+    <span style={{ flex: 1 }}>{label}</span>
+  </NavLink>
+);
 
 export default Layout;

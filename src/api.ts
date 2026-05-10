@@ -1,81 +1,70 @@
 // API Configuration
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-// Helper para manejar errores correctamente
 const request = async (url: string, options?: RequestInit) => {
   const res = await fetch(url, options);
-
   const contentType = res.headers.get('content-type');
-
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
-
   if (!contentType || !contentType.includes('application/json')) {
     throw new Error('La respuesta no es JSON');
   }
-
   return res.json();
 };
 
 export const api = {
-  // --- USERS ---
-  getUsers: async () =>
-    request(`${API_URL}/users`),
+  // ─── DEPARTAMENTOS ────────────────────────────────────────────────────────
+  getDepartamentos: () => request(`${API_URL}/departamentos`),
+  addDepartamento: (data: { nombre: string }) =>
+    request(`${API_URL}/departamentos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updateDepartamento: (id: number, data: { nombre: string }) =>
+    request(`${API_URL}/departamentos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  deleteDepartamento: (id: number) =>
+    request(`${API_URL}/departamentos/${id}`, { method: 'DELETE' }),
 
-  addUser: async (data: any) =>
-    request(`${API_URL}/users`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }),
+  // ─── USUARIOS ─────────────────────────────────────────────────────────────
+  getUsers: () => request(`${API_URL}/users`),
+  addUser: (data: any) =>
+    request(`${API_URL}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updateUser: (id: string, data: any) =>
+    request(`${API_URL}/users/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  deleteUser: (id: string) =>
+    request(`${API_URL}/users/${id}`, { method: 'DELETE' }),
 
-  // 🔥 CAMBIO IMPORTANTE (ya no va /:id)
-  updateUser: async (id: number, data: any) =>
-    request(`${API_URL}/users`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...data }),
-    }),
+  // ─── ACTIVOS ──────────────────────────────────────────────────────────────
+  getAssets: (filters?: { tipo?: string; disponibilidad?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.tipo) params.set('tipo', filters.tipo);
+    if (filters?.disponibilidad) params.set('disponibilidad', filters.disponibilidad);
+    const qs = params.toString();
+    return request(`${API_URL}/assets${qs ? `?${qs}` : ''}`);
+  },
+  addAsset: (data: any) =>
+    request(`${API_URL}/assets`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updateAsset: (id: number, data: any) =>
+    request(`${API_URL}/assets/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  deleteAsset: (id: number) =>
+    request(`${API_URL}/assets/${id}`, { method: 'DELETE' }),
 
-  // 🔥 CAMBIO IMPORTANTE (query param)
-  deleteUser: async (id: number) =>
-    request(`${API_URL}/users?id=${id}`, {
-      method: 'DELETE',
-    }),
+  // ─── MOVIMIENTOS ──────────────────────────────────────────────────────────
+  getMovements: (filters?: { assetId?: number; userId?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.assetId) params.set('assetId', String(filters.assetId));
+    if (filters?.userId) params.set('userId', filters.userId);
+    const qs = params.toString();
+    return request(`${API_URL}/movements${qs ? `?${qs}` : ''}`);
+  },
+  addMovement: (data: any) =>
+    request(`${API_URL}/movements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
 
-  // --- ASSETS ---
-  getAssets: async () =>
-    request(`${API_URL}/assets`),
-
-  addAsset: async (data: any) =>
-    request(`${API_URL}/assets`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }),
-
-  updateAsset: async (id: number, data: any) =>
-    request(`${API_URL}/assets`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...data }),
-    }),
-
-  deleteAsset: async (id: number) =>
-    request(`${API_URL}/assets?id=${id}`, {
-      method: 'DELETE',
-    }),
-
-  // --- MOVEMENTS ---
-  getMovements: async () =>
-    request(`${API_URL}/movements`),
-
-  addMovement: async (data: any) =>
-    request(`${API_URL}/movements`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }),
+  // ─── LÍNEAS MÓVILES ───────────────────────────────────────────────────────
+  getPhoneLines: () => request(`${API_URL}/phonelines`),
+  addPhoneLine: (data: any) =>
+    request(`${API_URL}/phonelines`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updatePhoneLine: (id: number, data: any) =>
+    request(`${API_URL}/phonelines/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  deletePhoneLine: (id: number) =>
+    request(`${API_URL}/phonelines/${id}`, { method: 'DELETE' }),
 };

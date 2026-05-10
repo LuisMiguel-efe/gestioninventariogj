@@ -7,48 +7,114 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── DEPARTAMENTOS ────────────────────────────────────────────────────────────
+model Departamento {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique
+
+  users  User[]
+  assets Asset[]
+}
+
+// ─── USUARIOS ─────────────────────────────────────────────────────────────────
 model User {
-  id                String      @id
-  nombre            String
-  email             String?
-  rol               String
-  departamento      String
-  activo            Boolean     @default(true)
-  ownedAssets       Asset[]     @relation("AssetOwner")
-  movements         Movement[]  @relation("MovementUser")
-  registeredMovements Movement[] @relation("MovementRegistrar")
+  id                  String       @id  // Cédula como ID
+  nombre              String
+  email               String?
+  rol                 String       @default("empleado") // empleado | administrador
+  departamentoId      Int?
+  departamento        Departamento? @relation(fields: [departamentoId], references: [id])
+  cargo               String?
+  activo              Boolean      @default(true)
+
+  ownedAssets         Asset[]      @relation("AssetOwner")
+  movements           Movement[]   @relation("MovementUser")
+  registeredMovements Movement[]   @relation("MovementRegistrar")
 }
 
+// ─── ACTIVOS ──────────────────────────────────────────────────────────────────
 model Asset {
-  id                 Int       @id @default(autoincrement())
-  codigo             String    @unique
-  tipo               String
-  marca              String
-  modelo             String
-  estado             String
-  disponibilidad      String
-  ubicacion          String
-  propietarioId      String?   
-  propietario        User?     @relation("AssetOwner", fields: [propietarioId], references: [id])
-  fechaAdquisicion   DateTime?
-  notas              String?
-  identificador      String?
-  procesador         String?
+  id                  Int           @id @default(autoincrement())
+  codigo              String        @unique   // Serial / número de activo
+  identificador       String?                 // Nombre amigable ej. "laptop53"
+  tipo                String                  // desktop|laptop|tablet|celular|impresora|pantalla|accesorio
+  subTipo             String?                 // Para accesorios: mouse|teclado|cargador|hub|adaptador|otro
+  marca               String
+  modelo              String
+  procesador          String?
+  condicion           String        @default("bueno") // bueno|regular|dañado
+  estado              String        @default("activo") // activo|inactivo|baja
+  disponibilidad      String        @default("disponible") // disponible|asignado|prestado|en reparacion
+  ubicacion           String?                 // Área/departamento actual
+  departamentoId      Int?
+  departamentoRef     Departamento? @relation(fields: [departamentoId], references: [id])
+  propietarioId       String?
+  propietario         User?         @relation("AssetOwner", fields: [propietarioId], references: [id])
+  fechaAdquisicion    DateTime?
+  valorAdquisicion    Float?
+  notas               String?
   detallesAdicionales String?
-  movements          Movement[]
+
+  // Relaciones especializadas (opcionales según tipo)
+  cellphoneDetail     CellphoneDetail?
+  printerDetail       PrinterDetail?
+
+  movements           Movement[]    @relation("MovementAsset")
+  secondaryMovements  Movement[]    @relation("MovementSecondaryAsset")
 }
 
-model Movement {
-  id              Int      @id @default(autoincrement())
-  assetId         Int
-  userId          String
-  registradoPorId String
-  tipo            String
-  fecha           DateTime
-  notas           String?
-  assetAnteriorId Int?
+// ─── DETALLE CELULAR ──────────────────────────────────────────────────────────
+model CellphoneDetail {
+  id          Int        @id @default(autoincrement())
+  assetId     Int        @unique
+  asset       Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  imei        String?
+  imei2       String?
+  phoneLineId Int?
+  phoneLine   PhoneLine? @relation(fields: [phoneLineId], references: [id])
+}
 
-  asset           Asset    @relation(fields: [assetId], references: [id])
-  user            User     @relation("MovementUser", fields: [userId], references: [id])
-  registradoPor   User     @relation("MovementRegistrar", fields: [registradoPorId], references: [id])
+// ─── LÍNEAS MÓVILES ───────────────────────────────────────────────────────────
+model PhoneLine {
+  id              Int               @id @default(autoincrement())
+  numero          String            @unique
+  operador        String                    // Claro|Movistar|Tigo|ETB|Avantel|otro
+  planNombre      String?
+  precioMensual   Float?
+  fechaActivacion DateTime?
+  notas           String?
+  activa          Boolean           @default(true)
+
+  cellphones      CellphoneDetail[]
+}
+
+// ─── DETALLE IMPRESORA ────────────────────────────────────────────────────────
+model PrinterDetail {
+  id                  Int    @id @default(autoincrement())
+  assetId             Int    @unique
+  asset               Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  referenciaEquipo    String?
+  precioToner         Float?
+  costoPromImpresion  Float?
+  tipoImpresion       String? // laser|inkjet|termica
+}
+
+// ─── MOVIMIENTOS ──────────────────────────────────────────────────────────────
+model Movement {
+  id                  Int      @id @default(autoincrement())
+  assetId             Int
+  secondaryAssetId    Int?     // Para cambios y préstamos: segundo equipo involucrado
+  userId              String   // Empleado que recibe o entrega
+  registradoPorId     String   // Admin que registra el acta
+  tipo                String   // asignacion|devolucion|cambio|prestamo|retorno_prestamo
+  fecha               DateTime @default(now())
+  fechaRetornoPrevista DateTime? // Para préstamos
+  condicionEntrega    String?  // Estado del equipo al entregarse
+  condicionRecepcion  String?  // Estado del equipo al recibirlo
+  notas               String?
+
+  asset               Asset    @relation("MovementAsset", fields: [assetId], references: [id])
+  secondaryAsset      Asset?   @relation("MovementSecondaryAsset", fields: [secondaryAssetId], references: [id])
+  user                User     @relation("MovementUser", fields: [userId], references: [id])
+  registradoPor       User     @relation("MovementRegistrar", fields: [registradoPorId], references: [id])
 }

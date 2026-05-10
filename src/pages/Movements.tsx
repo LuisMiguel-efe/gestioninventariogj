@@ -1,32 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
-import { Plus, Printer } from 'lucide-react';
+import { Plus, Printer, Search, X, Save, Clock } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const loadImage = (url: string): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.src = url;
-    img.onload = () => resolve(img);
-    img.onerror = (err) => reject(err);
-  });
-};
+const TIPOS_MOVIMIENTO = [
+  { value: 'asignacion',       label: 'Asignación',        desc: 'Entregar un equipo disponible a un empleado' },
+  { value: 'devolucion',       label: 'Devolución',        desc: 'Devolver un equipo asignado al inventario' },
+  { value: 'cambio',           label: 'Cambio',            desc: 'Reemplazar un equipo por otro (devolución + asignación simultánea)' },
+  { value: 'prestamo',         label: 'Préstamo',          desc: 'Entregar temporalmente un equipo a un empleado' },
+  { value: 'retorno_prestamo', label: 'Retorno Préstamo',  desc: 'Devolver un equipo prestado al inventario' },
+];
 
+const MOVIMIENTO_LABELS: Record<string, string> = Object.fromEntries(TIPOS_MOVIMIENTO.map(t => [t.value, t.label]));
+
+const CONDICIONES = ['bueno', 'regular', 'dañado'];
+
+const loadImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const img = new Image(); img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+  });
+
+// Searchable select component
 const SearchableSelect = ({ label, options, value, onSelect, placeholder, disabled = false }: any) => {
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const selected = options.find((o: any) => o.value === value);
-    if (selected) {
-      setSearch(selected.label);
-    } else {
-      setSearch('');
-    }
+    setSearch(selected ? selected.label : '');
   }, [value, options]);
 
-  const filteredOptions = options.filter((o: any) => o.label.toLowerCase().includes(search.toLowerCase()));
+  const filtered = options.filter((o: any) => o.label.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="input-group" style={{ position: 'relative' }}>
@@ -36,25 +44,20 @@ const SearchableSelect = ({ label, options, value, onSelect, placeholder, disabl
         placeholder={placeholder}
         value={search}
         disabled={disabled}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-        onChange={(e) => { setSearch(e.target.value); setIsOpen(true); }}
+        onFocus={() => !disabled && setIsOpen(true)}
+        onBlur={() => setTimeout(() => setIsOpen(false), 180)}
+        onChange={e => { setSearch(e.target.value); setIsOpen(true); }}
       />
       {isOpen && !disabled && (
-        <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '4px', zIndex: 10, maxHeight: '200px', overflowY: 'auto', listStyle: 'none', padding: 0, margin: 0, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-          {filteredOptions.length > 0 ? filteredOptions.map((o: any) => (
-            <li
-              key={o.value}
-              style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', fontSize: '0.875rem' }}
-              onMouseDown={() => {
-                setSearch(o.label);
-                setIsOpen(false);
-                onSelect(o.value);
-              }}
-            >
-              {o.label}
-            </li>
-          )) : <li style={{ padding: '8px 12px', color: '#94a3b8' }}>Sin coincidencias</li>}
+        <ul className="searchable-dropdown">
+          {filtered.length > 0
+            ? filtered.map((o: any) => (
+              <li key={o.value} onMouseDown={() => { setSearch(o.label); setIsOpen(false); onSelect(o.value); }}>
+                {o.label}
+              </li>
+            ))
+            : <li style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Sin coincidencias</li>
+          }
         </ul>
       )}
     </div>
@@ -62,341 +65,433 @@ const SearchableSelect = ({ label, options, value, onSelect, placeholder, disabl
 };
 
 const Movements: React.FC = () => {
+  const { sessionUser } = useAuth();
   const [movements, setMovements] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
 
   const [filterCedula, setFilterCedula] = useState('');
+  const [filterTipo, setFilterTipo] = useState('');
 
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<any>({
     assetId: 0,
-    assetAnteriorId: 0,
+    secondaryAssetId: 0,
     userId: '',
     tipo: 'asignacion',
-    notas: ''
+    condicionEntrega: 'bueno',
+    condicionRecepcion: 'bueno',
+    fechaRetornoPrevista: '',
+    notas: '',
   });
 
   const fetchData = async () => {
-    setMovements(await api.getMovements());
-    setAssets(await api.getAssets());
-    setUsers(await api.getUsers());
+    const [m, a, u] = await Promise.all([api.getMovements(), api.getAssets(), api.getUsers()]);
+    setMovements(m); setAssets(a); setUsers(u);
   };
+  useEffect(() => { fetchData(); }, []);
 
-  useEffect(() => { fetchData() }, []);
+  const set = (field: string, value: any) => setFormData((p: any) => ({ ...p, [field]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.assetId === 0 || !formData.userId) return;
-    if (formData.tipo === 'cambio' && formData.assetAnteriorId === 0) return;
-
-    const newMovement = {
-      ...formData,
-      registradoPorId: '94152348', // Simulated current connected admin user
-      fecha: new Date().toISOString()
-    };
-
-    // Save Movement history
-    const insertedMovementId = await api.addMovement(newMovement);
-
-    // 1. Process main asset Logic
-    const asset = assets.find(a => a.id === formData.assetId);
-    if (asset) {
-      const updatedAsset = { ...asset };
-      if (formData.tipo === 'asignacion' || formData.tipo === 'cambio') {
-        updatedAsset.disponibilidad = 'asignado';
-        updatedAsset.propietarioId = formData.userId;
-        const assignedUser = users.find(u => String(u.id) === String(formData.userId));
-        if (assignedUser) updatedAsset.ubicacion = assignedUser.departamento;
-      } else if (formData.tipo === 'devolucion') {
-        updatedAsset.disponibilidad = 'disponible';
-        updatedAsset.propietarioId = undefined; // unassign
-        updatedAsset.ubicacion = 'Bodega Compras';
-      }
-      await api.updateAsset(asset.id, updatedAsset);
+    if (!formData.assetId || !formData.userId) return;
+    if (formData.tipo === 'cambio' && !formData.secondaryAssetId) {
+      alert('Para un cambio debes seleccionar el equipo anterior a devolver.');
+      return;
     }
+    setSubmitting(true);
+    try {
+      const registradoPorId = sessionUser?.cedula || '00000000';
+      const newMovement = { ...formData, registradoPorId, fecha: new Date().toISOString() };
+      const result = await api.addMovement(newMovement);
 
-    // 2. Process Old Asset Logic (in case of 'Cambio')
-    if (formData.tipo === 'cambio' && formData.assetAnteriorId !== 0) {
-      const oldAsset = assets.find(a => a.id === formData.assetAnteriorId);
-      if (oldAsset) {
-        const updatedOldAsset = { ...oldAsset };
-        updatedOldAsset.disponibilidad = 'disponible';
-        updatedOldAsset.propietarioId = undefined;
-        updatedOldAsset.ubicacion = 'Bodega Compras';
-        await api.updateAsset(oldAsset.id, updatedOldAsset);
+      // ── Actualizar activos automáticamente ──
+      const asset = assets.find(a => a.id === formData.assetId);
+      const assignedUser = users.find(u => String(u.id) === String(formData.userId));
+
+      if (asset) {
+        const update: any = { ...asset };
+        if (['asignacion', 'cambio', 'prestamo'].includes(formData.tipo)) {
+          update.disponibilidad = formData.tipo === 'prestamo' ? 'prestado' : 'asignado';
+          update.propietarioId = formData.userId;
+          if (assignedUser?.departamento) update.ubicacion = assignedUser.departamento.nombre;
+        } else if (['devolucion', 'retorno_prestamo'].includes(formData.tipo)) {
+          update.disponibilidad = 'disponible';
+          update.propietarioId = null;
+          update.ubicacion = 'Bodega Compras';
+        }
+        await api.updateAsset(asset.id, update);
       }
-    }
 
-    // Reset and Refresh
-    setShowForm(false);
-    setFormData({ assetId: 0, assetAnteriorId: 0, userId: '', tipo: 'asignacion', notas: '' });
-    fetchData();
+      // En cambio: devolver el equipo anterior
+      if (formData.tipo === 'cambio' && formData.secondaryAssetId) {
+        const oldAsset = assets.find(a => a.id === formData.secondaryAssetId);
+        if (oldAsset) {
+          await api.updateAsset(oldAsset.id, { ...oldAsset, disponibilidad: 'disponible', propietarioId: null, ubicacion: 'Bodega Compras' });
+        }
+      }
 
-    // Trigger Print
-    generatePDF({ ...newMovement, id: insertedMovementId || Math.floor(Math.random() * 1000) });
+      setShowForm(false);
+      setFormData({ assetId: 0, secondaryAssetId: 0, userId: '', tipo: 'asignacion', condicionEntrega: 'bueno', condicionRecepcion: 'bueno', fechaRetornoPrevista: '', notas: '' });
+      await fetchData();
+
+      // Generar PDF
+      generatePDF({ ...newMovement, id: result?.id || Math.random() });
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    } finally { setSubmitting(false); }
   };
 
   const generatePDF = async (movement: any) => {
     const doc = new jsPDF();
     const asset = assets.find(a => a.id === movement.assetId);
-    const assetAnterior = assets.find(a => a.id === movement.assetAnteriorId);
-    const user = users.find(u => u.id === movement.userId);
+    const secondaryAsset = assets.find(a => a.id === movement.secondaryAssetId);
+    const user = users.find(u => String(u.id) === String(movement.userId));
+    const registrador = users.find(u => String(u.id) === String(movement.registradoPorId));
 
     let headerImg: HTMLImageElement | null = null;
     let footerImg: HTMLImageElement | null = null;
-    try {
-      headerImg = await loadImage('/header.png');
-      footerImg = await loadImage('/footer.png');
-    } catch (err) {
-      console.warn('No se encontraron header.png o footer.png en la carpeta public');
-    }
+    try { headerImg = await loadImage('/header.png'); } catch {}
+    try { footerImg = await loadImage('/footer.png'); } catch {}
+
+    const fechaFormat = new Date(movement.fecha).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    const tipoLabel = MOVIMIENTO_LABELS[movement.tipo] || movement.tipo;
 
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
-    const fechaFormat = new Date(movement.fecha).toLocaleDateString();
-    doc.text(`Santiago de Cali, ${fechaFormat}`, 14, 45);
-    doc.text('Cordial saludo.', 14, 55);
+    doc.setFontSize(11);
+    doc.text(`Santiago de Cali, ${fechaFormat}`, 14, 48);
+    doc.text('Cordial saludo.', 14, 56);
+    doc.setFontSize(11);
+    doc.text(`Mediante el presente documento se registra una ${tipoLabel.toUpperCase()} con los siguientes detalles:`, 14, 64);
 
-    if (movement.tipo === 'cambio') {
-      doc.text(`Mediante el presente documento se hace CAMBIO de un equipo con los siguientes detalles:`, 14, 65);
-    } else {
-      doc.text(`Mediante el presente documento se hace ${movement.tipo.toUpperCase()} de un equipo con los siguientes detalles:`, 14, 65);
-    }
-
-    // Detail Tables
+    // Asset details table
     autoTable(doc, {
       startY: 70,
-      head: [[movement.tipo === 'cambio' ? 'Detalles del Activo Nuevo (Entrega)' : 'Detalles del Activo', '']],
+      head: [[movement.tipo === 'cambio' ? 'Equipo Nuevo (a Entregar)' : `Equipo — ${tipoLabel}`, 'Información']],
       body: [
-        ['Identificador', asset?.identificador || 'N/A'],
-        ['Equipo', `${asset?.tipo?.toUpperCase() || 'N/A'} - ${asset?.marca} ${asset?.modelo}`],
-        ['Procesador', asset?.procesador || 'N/A'],
-        ['Estado Técnico', asset?.estado?.toUpperCase() || 'N/A'],
-        ['Anterior colaborador', asset?.propietarioId?.nombre || 'N/A'],
+        ['Identificador', asset?.identificador || '—'],
+        ['Tipo / Marca / Modelo', `${asset?.tipo?.toUpperCase() || '?'} — ${asset?.marca} ${asset?.modelo}`],
+        ...(asset?.procesador ? [['Procesador', asset.procesador]] : []),
+        ['Serial / Código', asset?.codigo || '—'],
+        ['Condición de Entrega', movement.condicionEntrega || '—'],
         ['Detalles Adicionales', asset?.detallesAdicionales || 'Ninguno'],
-        ['Notas de Movimiento', movement.notas || 'Ninguna']
+        ['Notas del Movimiento', movement.notas || 'Ninguna'],
+        ...(movement.tipo === 'prestamo' && movement.fechaRetornoPrevista
+          ? [['Fecha de Retorno Prevista', new Date(movement.fechaRetornoPrevista).toLocaleDateString('es-CO')]]
+          : []),
       ],
       theme: 'grid',
-      headStyles: { fillColor: [0, 119, 182] }
+      headStyles: { fillColor: [0, 82, 165] },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
     });
 
-    if (movement.tipo === 'cambio' && assetAnterior) {
+    // Secondary asset table (cambio)
+    if (movement.tipo === 'cambio' && secondaryAsset) {
       autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY + 10,
-        head: [['Detalles del Activo Anterior (Devolución)', '']],
+        startY: (doc as any).lastAutoTable.finalY + 8,
+        head: [['Equipo Anterior (a Devolver)', 'Información']],
         body: [
-          ['Identificador', assetAnterior.identificador || 'N/A'],
-          ['Código', assetAnterior.codigo || 'N/A'],
-          ['Equipo', `${assetAnterior.tipo?.toUpperCase() || 'N/A'} - ${assetAnterior.marca} ${assetAnterior.modelo}`],
-          ['Procesador', assetAnterior.procesador || 'N/A'],
-          ['Estado Técnico', assetAnterior.estado?.toUpperCase() || 'N/A'],
+          ['Identificador', secondaryAsset.identificador || '—'],
+          ['Tipo / Marca / Modelo', `${secondaryAsset.tipo?.toUpperCase() || '?'} — ${secondaryAsset.marca} ${secondaryAsset.modelo}`],
+          ['Serial / Código', secondaryAsset.codigo || '—'],
+          ['Condición de Recepción', movement.condicionRecepcion || '—'],
         ],
         theme: 'grid',
-        headStyles: { fillColor: [0, 119, 182] }
+        headStyles: { fillColor: [0, 82, 165] },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
       });
     }
 
-    // Signatures dynamic swap
-    let finalY = (doc as any).lastAutoTable.finalY + 30;
+    // Signatures
+    let finalY = (doc as any).lastAutoTable.finalY + 28;
+    if (finalY > 250) { doc.addPage(); finalY = 40; }
 
-    // Check if new page is needed for signatures
-    if (finalY > 250) {
-      doc.addPage();
-      finalY = 40;
-    }
+    const adminInfo = registrador
+      ? { nombre: registrador.nombre, cedula: registrador.id, cargo: registrador.cargo || 'Administrador', correo: registrador.email || '' }
+      : { nombre: sessionUser?.nombre || 'Administrador', cedula: sessionUser?.cedula || '', cargo: sessionUser?.cargo || '', correo: sessionUser?.email || '' };
 
-    const adminDetails = {
-      nombre: 'Gustavo Adolfo Franco',
-      cedula: '94152348',
-      cargo: 'Jefe de Compras',
-      correo: 'compras@administracionesgj.com',
-    };
-
-    const userDetails = {
-      nombre: user?.nombre || '',
-      cedula: user?.id || '',
-      cargo: user?.departamento || '',
+    const userInfo = {
+      nombre: user?.nombre || movement.userId,
+      cedula: user?.id || movement.userId,
+      cargo: user?.cargo || user?.departamento?.nombre || '',
       correo: user?.email || '',
     };
 
-    // If "devolucion", User yields to Admin. Else (asignacion, cambio), Admin yields to User
-    const [personEntrega, personRecibe] = movement.tipo === 'devolucion'
-      ? [userDetails, adminDetails]
-      : [adminDetails, userDetails];
+    const [entrega, recibe] = ['devolucion', 'retorno_prestamo'].includes(movement.tipo)
+      ? [userInfo, adminInfo]
+      : [adminInfo, userInfo];
 
-    doc.line(20, finalY, 80, finalY);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Firma quien entrega', 20, finalY + 6);
+    const drawSignature = (x: number, person: any) => {
+      doc.line(x, finalY, x + 60, finalY);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold'); doc.text('Firma quien entrega', x, finalY + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Nombre: ${person.nombre}`, x, finalY + 11);
+      doc.text(`C.C: ${person.cedula}`, x, finalY + 17);
+      if (person.cargo) doc.text(`Cargo: ${person.cargo}`, x, finalY + 23);
+      if (person.correo) doc.text(`Correo: ${person.correo}`, x, finalY + 29);
+    };
+
+    doc.line(14, finalY, 74, finalY);
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.text('Firma quien entrega:', 14, finalY + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Nombre: ${personEntrega.nombre}`, 20, finalY + 12);
-    doc.text(`C.C: ${personEntrega.cedula}`, 20, finalY + 18);
-    doc.text(`Cargo: ${personEntrega.cargo}`, 20, finalY + 24);
-    doc.text(`Correo: ${personEntrega.correo}`, 20, finalY + 30);
+    doc.text(`Nombre: ${entrega.nombre}`, 14, finalY + 11);
+    doc.text(`C.C: ${entrega.cedula}`, 14, finalY + 17);
+    if (entrega.cargo) doc.text(`Cargo: ${entrega.cargo}`, 14, finalY + 23);
+    if (entrega.correo) doc.text(`Correo: ${entrega.correo}`, 14, finalY + 29);
 
     doc.line(120, finalY, 180, finalY);
     doc.setFont('helvetica', 'bold');
-    doc.text('Firma quien recibe', 120, finalY + 6);
+    doc.text('Firma quien recibe:', 120, finalY + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Nombre: ${personRecibe.nombre}`, 120, finalY + 12);
-    doc.text(`C.C: ${personRecibe.cedula}`, 120, finalY + 18);
-    doc.text(`Cargo: ${personRecibe.cargo}`, 120, finalY + 24);
-    doc.text(`Correo: ${personRecibe.correo}`, 120, finalY + 30);
+    doc.text(`Nombre: ${recibe.nombre}`, 120, finalY + 11);
+    doc.text(`C.C: ${recibe.cedula}`, 120, finalY + 17);
+    if (recibe.cargo) doc.text(`Cargo: ${recibe.cargo}`, 120, finalY + 23);
+    if (recibe.correo) doc.text(`Correo: ${recibe.correo}`, 120, finalY + 29);
 
-    // Add header and footer to every page
+    // Header/Footer on all pages
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       if (headerImg) {
-        const imgRatio = headerImg.width / headerImg.height;
-        const pdfWidth = 210;
-        const pdfHeight = pdfWidth / imgRatio;
-        doc.addImage(headerImg, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        const r = headerImg.width / headerImg.height;
+        doc.addImage(headerImg, 'PNG', 0, 0, 210, 210 / r);
       }
       if (footerImg) {
-        const imgRatio = footerImg.width / footerImg.height;
-        const pdfWidth = 210;
-        const pdfHeight = pdfWidth / imgRatio;
-        doc.addImage(footerImg, 'PNG', 0, 297 - pdfHeight, pdfWidth, pdfHeight);
+        const r = footerImg.width / footerImg.height;
+        const h = 210 / r;
+        doc.addImage(footerImg, 'PNG', 0, 297 - h, 210, h);
       }
     }
 
-    doc.save(`Acta_${user?.id}_${movement.tipo}.pdf`);
+    doc.save(`Acta_${tipoLabel}_${user?.id || movement.userId}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const getAssetName = (id: number) => {
-    const asset = assets.find(a => a.id === id);
-    return asset ? `${asset.identificador || asset.codigo} - ${asset.tipo}` : 'Desconocido';
-  };
-  const getUserName = (id: string | number) => {
-    const user = users.find(u => u.id === id || String(u.id) === String(id));
-    return user ? user.nombre : 'Desconocido';
-  };
+  const filteredMovements = useMemo(() => movements.filter(m => {
+    const matchCedula = !filterCedula || String(m.userId).includes(filterCedula) || String(m.registradoPorId).includes(filterCedula);
+    const matchTipo = !filterTipo || m.tipo === filterTipo;
+    return matchCedula && matchTipo;
+  }), [movements, filterCedula, filterTipo]);
 
-  const filteredMovements = movements.filter(m => {
-    if (!filterCedula) return true;
-    return String(m.userId).includes(filterCedula);
-  });
+  // Asset options per movement type
+  const mainAssetOptions = useMemo(() => assets.filter(a => {
+    if (formData.tipo === 'asignacion') return a.disponibilidad === 'disponible';
+    if (formData.tipo === 'devolucion') return a.disponibilidad === 'asignado';
+    if (formData.tipo === 'cambio') return a.disponibilidad === 'disponible';
+    if (formData.tipo === 'prestamo') return a.disponibilidad === 'disponible';
+    if (formData.tipo === 'retorno_prestamo') return a.disponibilidad === 'prestado';
+    return true;
+  }).map(a => ({ value: a.id, label: `${a.identificador || a.codigo} | ${a.tipo} ${a.marca} ${a.modelo}` })), [assets, formData.tipo]);
 
+  const secondaryAssetOptions = useMemo(() =>
+    assets.filter(a => a.disponibilidad === 'asignado')
+      .map(a => ({ value: a.id, label: `${a.identificador || a.codigo} | ${a.tipo} ${a.marca} ${a.modelo}` })),
+    [assets]);
 
+  const userOptions = useMemo(() =>
+    users.map(u => ({ value: u.id, label: `${u.nombre} — C.C. ${u.id}` })),
+    [users]);
+
+  const currentTipoInfo = TIPOS_MOVIMIENTO.find(t => t.value === formData.tipo);
+  const isDevolucionType = ['devolucion', 'retorno_prestamo'].includes(formData.tipo);
 
   return (
     <div className="animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '1.875rem' }}>Registro de Movimientos</h1>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-          <Plus size={18} /> Registrar Movimiento
+      <div className="page-header">
+        <div>
+          <h1>Movimientos & Actas</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: 4 }}>
+            {movements.length} movimientos registrados — Trazabilidad completa de activos
+          </p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowForm(s => !s)}>
+          {showForm ? <><X size={16} /> Cancelar</> : <><Plus size={16} /> Registrar Movimiento</>}
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <input 
-          className="input-field" 
-          placeholder="Filtrar por Cédula del Empleado..." 
-          style={{ flex: 1, minWidth: '250px' }}
-          value={filterCedula} 
-          onChange={(e) => setFilterCedula(e.target.value)} 
-        />
-      </div>
-
+      {/* Form */}
       {showForm && (
-        <div style={{ background: 'var(--surface-solid)', padding: '24px', borderRadius: '12px', marginBottom: '24px', border: '1px solid #e2e8f0' }}>
-          <h2 style={{ marginBottom: '16px' }}>Nuevo Registro</h2>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="input-group">
-              <label className="input-label">Tipo de Movimiento</label>
-              <select className="input-field" value={formData.tipo} onChange={e => setFormData({ ...formData, tipo: e.target.value, assetId: 0, userId: '', assetAnteriorId: 0 })}>
-                <option value="asignacion">Asignación</option>
-                <option value="devolucion">Devolución</option>
-                <option value="cambio">Cambio</option>
-              </select>
-            </div>
+        <div className="form-panel">
+          <h2>Nuevo Registro de Movimiento</h2>
 
-            <SearchableSelect
-              value={formData.assetId}
-              label={formData.tipo === 'cambio' ? 'Equipo de Reemplazo (A entregar al usuario)' : 'Activo Involucrado'}
-              placeholder="Busca por identificador o codigo..."
-              options={assets.filter(a => {
-                if (formData.tipo === 'asignacion' && a.disponibilidad !== 'disponible') return false;
-                if (formData.tipo === 'devolucion' && a.disponibilidad !== 'asignado') return false;
-                if (formData.tipo === 'cambio' && a.disponibilidad !== 'disponible') return false;
-                return true;
-              }).map(a => ({ value: a.id, label: `${a.identificador || a.codigo} | ${a.tipo} (${a.marca})` }))}
-              onSelect={(val: number) => {
-                const found = assets.find(a => a.id === val);
-                if (found && formData.tipo === 'devolucion' && found.propietarioId) {
-                  setFormData({ ...formData, assetId: found.id, userId: found.propietarioId });
-                } else {
-                  setFormData({ ...formData, assetId: found ? found.id : 0 });
-                }
-              }}
-            />
+          {/* Tipo selector cards */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+            {TIPOS_MOVIMIENTO.map(t => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => setFormData({ assetId: 0, secondaryAssetId: 0, userId: '', tipo: t.value, condicionEntrega: 'bueno', condicionRecepcion: 'bueno', fechaRetornoPrevista: '', notas: '' })}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 10,
+                  border: `2px solid ${formData.tipo === t.value ? 'var(--primary-main)' : '#d1dbe8'}`,
+                  background: formData.tipo === t.value ? 'var(--primary-subtle)' : 'white',
+                  cursor: 'pointer',
+                  fontWeight: formData.tipo === t.value ? 700 : 500,
+                  color: formData.tipo === t.value ? 'var(--primary-dark)' : 'var(--text-secondary)',
+                  fontSize: '0.85rem',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-            {formData.tipo === 'cambio' && (
+          {currentTipoInfo && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 20, background: 'rgba(0,82,165,0.05)', padding: '10px 14px', borderRadius: 8 }}>
+              ℹ️ {currentTipoInfo.desc}
+            </p>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
               <SearchableSelect
-                value={formData.assetAnteriorId}
-                label="Equipo Entrante (A devolver al inventario)"
-                placeholder="Busca el equipo antiguo a devolver..."
-                options={assets.filter(a => a.disponibilidad === 'asignado').map((a) => ({ value: a.id, label: `${a.identificador || a.codigo} | ${a.tipo} (${a.marca})` }))}
-                onSelect={(val: number) => setFormData({ ...formData, assetAnteriorId: val })}
+                label={formData.tipo === 'cambio' ? 'Equipo Nuevo (a Entregar)' : 'Activo Principal *'}
+                placeholder="Buscar equipo..."
+                options={mainAssetOptions}
+                value={formData.assetId}
+                onSelect={(val: number) => {
+                  const found = assets.find(a => a.id === val);
+                  if (found && isDevolucionType && found.propietarioId) {
+                    setFormData((p: any) => ({ ...p, assetId: found.id, userId: found.propietarioId }));
+                  } else {
+                    setFormData((p: any) => ({ ...p, assetId: val }));
+                  }
+                }}
               />
-            )}
 
-            <div className="input-group">
-              <label className="input-label">Usuario / Empleado</label>
-              <select required className="input-field" value={formData.userId} disabled={formData.tipo === 'devolucion'} onChange={e => setFormData({ ...formData, userId: e.target.value })}>
-                <option value="">Seleccione un usuario...</option>
-                {users.map(u => <option key={u.id} value={u.id}>{u.nombre} - {u.id}</option>)}
-              </select>
+              {formData.tipo === 'cambio' && (
+                <SearchableSelect
+                  label="Equipo Anterior (a Devolver) *"
+                  placeholder="Buscar equipo asignado..."
+                  options={secondaryAssetOptions}
+                  value={formData.secondaryAssetId}
+                  onSelect={(val: number) => set('secondaryAssetId', val)}
+                />
+              )}
+
+              <SearchableSelect
+                label="Empleado Involucrado *"
+                placeholder="Buscar por nombre o cédula..."
+                options={userOptions}
+                value={formData.userId}
+                onSelect={(val: string) => set('userId', val)}
+                disabled={isDevolucionType && !!formData.assetId}
+              />
+
+              <div className="input-group">
+                <label className="input-label">Condición al Entregar</label>
+                <select className="input-field" value={formData.condicionEntrega} onChange={e => set('condicionEntrega', e.target.value)}>
+                  {CONDICIONES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                </select>
+              </div>
+
+              {formData.tipo === 'cambio' && (
+                <div className="input-group">
+                  <label className="input-label">Condición del Equipo Devuelto</label>
+                  <select className="input-field" value={formData.condicionRecepcion} onChange={e => set('condicionRecepcion', e.target.value)}>
+                    {CONDICIONES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {formData.tipo === 'prestamo' && (
+                <div className="input-group">
+                  <label className="input-label"><Clock size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Fecha de Retorno Prevista</label>
+                  <input type="date" className="input-field" value={formData.fechaRetornoPrevista} onChange={e => set('fechaRetornoPrevista', e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                </div>
+              )}
+
+              <div className="input-group span-2">
+                <label className="input-label">Notas del Movimiento</label>
+                <textarea className="input-field" rows={2} value={formData.notas} onChange={e => set('notas', e.target.value)} placeholder="Motivo del movimiento, observaciones, etc." />
+              </div>
             </div>
-            <div className="input-group" style={{ gridColumn: 'span 2' }}>
-              <label className="input-label">Notas Adicionales</label>
-              <textarea className="input-field" value={formData.notas} onChange={e => setFormData({ ...formData, notas: e.target.value })} rows={3} />
-            </div>
-            <div className="input-group" style={{ gridColumn: 'span 2' }}>
-              <button type="submit" className="btn btn-primary" style={{ width: 'fit-content' }}>Guardar Registro</button>
+
+            <div style={{ marginTop: 4, display: 'flex', gap: 10 }}>
+              <button type="submit" className="btn btn-primary" disabled={submitting}>
+                <Save size={16} /> {submitting ? 'Guardando...' : 'Guardar y Generar Acta PDF'}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancelar</button>
             </div>
           </form>
         </div>
       )}
 
-      <div style={{ overflowX: 'auto', background: 'var(--surface-solid)', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      {/* Filters */}
+      <div className="filter-bar">
+        <div style={{ position: 'relative', flex: 1, maxWidth: 340 }}>
+          <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          <input className="input-field" placeholder="Filtrar por cédula de empleado..." style={{ paddingLeft: 34 }} value={filterCedula} onChange={e => setFilterCedula(e.target.value)} />
+        </div>
+        <select className="input-field" style={{ maxWidth: 200 }} value={filterTipo} onChange={e => setFilterTipo(e.target.value)}>
+          <option value="">Todos los tipos</option>
+          {TIPOS_MOVIMIENTO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', alignSelf: 'center' }}>
+          {filteredMovements.length} de {movements.length} movimientos
+        </p>
+      </div>
+
+      {/* Table */}
+      <div className="section-card" style={{ overflow: 'auto' }}>
+        <table className="data-table">
           <thead>
-            <tr style={{ borderBottom: '2px solid #e2e8f0', background: 'var(--bg-color)' }}>
-              <th style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>ID/Fecha</th>
-              <th style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>Tipo</th>
-              <th style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>Activo</th>
-              <th style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>Usuario Involucrado</th>
-              <th style={{ padding: '16px 12px', color: 'var(--text-secondary)' }}>Acta PDF</th>
+            <tr>
+              <th>#</th>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Equipo</th>
+              <th>Empleado</th>
+              <th>Condición</th>
+              <th>Notas</th>
+              <th>Acta</th>
             </tr>
           </thead>
           <tbody>
-            {filteredMovements.map(m => (
-              <tr key={m.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '16px 12px' }}>
-                  <div style={{ fontWeight: 600 }}>#{m.id}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(m.fecha).toLocaleDateString()}</div>
-                </td>
-                <td style={{ padding: '16px 12px' }}>
-                  <span className="badge" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--primary-dark)' }}>{m.tipo}</span>
-                </td>
-                <td style={{ padding: '16px 12px' }}>{getAssetName(m.assetId)}</td>
-                <td style={{ padding: '16px 12px' }}>{getUserName(m.userId)}</td>
-                <td style={{ padding: '16px 12px' }}>
-                  <button className="btn btn-outline" style={{ padding: '6px 12px' }} onClick={() => generatePDF(m)}>
-                    <Printer size={16} /> Imprimir Acta
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {filteredMovements.length === 0
+              ? <tr><td colSpan={8}><div className="empty-state"><p>No se encontraron movimientos.</p></div></td></tr>
+              : filteredMovements.map(m => (
+                <tr key={m.id}>
+                  <td style={{ fontWeight: 600, color: 'var(--text-muted)' }}>#{m.id}</td>
+                  <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                    <div>{new Date(m.fecha).toLocaleDateString('es-CO')}</div>
+                    <div style={{ color: 'var(--text-muted)' }}>{new Date(m.fecha).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</div>
+                  </td>
+                  <td><span className={`badge badge-${m.tipo}`}>{MOVIMIENTO_LABELS[m.tipo] || m.tipo}</span></td>
+                  <td style={{ fontSize: '0.85rem' }}>
+                    <div style={{ fontWeight: 500 }}>{m.asset?.identificador || m.asset?.codigo || `#${m.assetId}`}</div>
+                    {m.secondaryAsset && <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>↔ {m.secondaryAsset.identificador || m.secondaryAsset.codigo}</div>}
+                  </td>
+                  <td style={{ fontSize: '0.85rem' }}>
+                    <div style={{ fontWeight: 500 }}>{m.user?.nombre || m.userId}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>C.C. {m.userId}</div>
+                  </td>
+                  <td style={{ fontSize: '0.82rem' }}>
+                    {m.condicionEntrega && <span className="badge badge-activo">{m.condicionEntrega}</span>}
+                  </td>
+                  <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', maxWidth: 160 }}>
+                    <span title={m.notas || ''} style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {m.notas || '—'}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="btn btn-outline btn-sm" onClick={() => generatePDF(m)}>
+                      <Printer size={14} /> Acta PDF
+                    </button>
+                  </td>
+                </tr>
+              ))
+            }
           </tbody>
         </table>
-        {filteredMovements.length === 0 && <p style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>No se encontraron movimientos.</p>}
       </div>
     </div>
   );
-}
+};
 
 export default Movements;

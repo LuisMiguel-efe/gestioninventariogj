@@ -57,14 +57,14 @@ const Layout: React.FC = () => {
         </button>
 
         {/* Logo */}
-        <div style={{ 
-          padding: isCollapsed ? '28px 12px 24px' : '28px 20px 24px', 
+        <div style={{
+          padding: isCollapsed ? '28px 12px 24px' : '28px 20px 24px',
           borderBottom: '1px solid rgba(255,255,255,0.1)',
           display: 'flex',
           justifyContent: isCollapsed ? 'center' : 'flex-start',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '12px', padding: '6px', flexShrink: 0 }}>
+            <div style={{ background: '#d1dfe1ff', borderRadius: '12px', padding: '6px', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
               <img src="/logogj.png" alt="GJ Logo" width={36} height={40} style={{ display: 'block' }} />
             </div>
             {!isCollapsed && (

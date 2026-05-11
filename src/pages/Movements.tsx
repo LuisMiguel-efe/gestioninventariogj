@@ -6,11 +6,11 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const TIPOS_MOVIMIENTO = [
-  { value: 'asignacion',       label: 'Asignación',        desc: 'Entregar un equipo disponible a un empleado' },
-  { value: 'devolucion',       label: 'Devolución',        desc: 'Devolver un equipo asignado al inventario' },
-  { value: 'cambio',           label: 'Cambio',            desc: 'Reemplazar un equipo por otro (devolución + asignación simultánea)' },
-  { value: 'prestamo',         label: 'Préstamo',          desc: 'Entregar temporalmente un equipo a un empleado' },
-  { value: 'retorno_prestamo', label: 'Retorno Préstamo',  desc: 'Devolver un equipo prestado al inventario' },
+  { value: 'asignacion', label: 'Asignación', desc: 'Entregar un equipo disponible a un empleado' },
+  { value: 'devolucion', label: 'Devolución', desc: 'Devolver un equipo asignado al inventario' },
+  { value: 'cambio', label: 'Cambio', desc: 'Reemplazar un equipo por otro (devolución + asignación simultánea)' },
+  { value: 'prestamo', label: 'Préstamo', desc: 'Entregar temporalmente un equipo a un empleado' },
+  { value: 'retorno_prestamo', label: 'Retorno Préstamo', desc: 'Devolver un equipo prestado al inventario' },
 ];
 
 const MOVIMIENTO_LABELS: Record<string, string> = Object.fromEntries(TIPOS_MOVIMIENTO.map(t => [t.value, t.label]));
@@ -153,8 +153,8 @@ const Movements: React.FC = () => {
 
     let headerImg: HTMLImageElement | null = null;
     let footerImg: HTMLImageElement | null = null;
-    try { headerImg = await loadImage('/header.png'); } catch {}
-    try { footerImg = await loadImage('/footer.png'); } catch {}
+    try { headerImg = await loadImage('/header.png'); } catch { }
+    try { footerImg = await loadImage('/footer.png'); } catch { }
 
     const fechaFormat = new Date(movement.fecha).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
     const tipoLabel = MOVIMIENTO_LABELS[movement.tipo] || movement.tipo;
@@ -164,12 +164,12 @@ const Movements: React.FC = () => {
     doc.text(`Santiago de Cali, ${fechaFormat}`, 14, 48);
     doc.text('Cordial saludo.', 14, 56);
     doc.setFontSize(11);
-    doc.text(`Mediante el presente documento se registra una ${tipoLabel.toUpperCase()} con los siguientes detalles:`, 14, 64);
+    doc.text(`Mediante el presente documento se registra ${tipoLabel.toUpperCase()} de equipo con los siguientes detalles:`, 14, 64);
 
     // Asset details table
     autoTable(doc, {
       startY: 70,
-      head: [[movement.tipo === 'cambio' ? 'Equipo Nuevo (a Entregar)' : `Equipo — ${tipoLabel}`, 'Información']],
+      head: [[movement.tipo === 'cambio' ? 'Equipo a Entregar' : `Equipo — ${tipoLabel}`, 'Información']],
       body: [
         ['Identificador', asset?.identificador || '—'],
         ['Tipo / Marca / Modelo', `${asset?.tipo?.toUpperCase() || '?'} — ${asset?.marca} ${asset?.modelo}`],
@@ -183,7 +183,7 @@ const Movements: React.FC = () => {
           : []),
       ],
       theme: 'grid',
-      headStyles: { fillColor: [0, 82, 165] },
+      headStyles: { fillColor: false, textColor: [0, 0, 0], fontStyle: 'bold' },
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
     });
 
@@ -191,7 +191,7 @@ const Movements: React.FC = () => {
     if (movement.tipo === 'cambio' && secondaryAsset) {
       autoTable(doc, {
         startY: (doc as any).lastAutoTable.finalY + 8,
-        head: [['Equipo Anterior (a Devolver)', 'Información']],
+        head: [['Equipo a Devolver', 'Información']],
         body: [
           ['Identificador', secondaryAsset.identificador || '—'],
           ['Tipo / Marca / Modelo', `${secondaryAsset.tipo?.toUpperCase() || '?'} — ${secondaryAsset.marca} ${secondaryAsset.modelo}`],
@@ -199,14 +199,27 @@ const Movements: React.FC = () => {
           ['Condición de Recepción', movement.condicionRecepcion || '—'],
         ],
         theme: 'grid',
-        headStyles: { fillColor: [0, 82, 165] },
+        headStyles: { fillColor: false, textColor: [0, 0, 0], fontStyle: 'bold' },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
       });
     }
 
+    // Condiciones text
+    let currentY = (doc as any).lastAutoTable.finalY + 12;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const condicionesText = "Condiciones de Uso: El presente equipo es una herramienta de trabajo proporcionada exclusivamente para el desempeño de sus labores en la empresa. El empleado se compromete a darle un uso adecuado, velar por su cuidado y seguridad. Asimismo, se compromete a reportar de manera inmediata cualquier fallo, daño, pérdida o robo. En caso de comprobarse que el equipo sufrió daños, pérdida o afectación por negligencia, descuido o mal uso, el empleado asumirá la responsabilidad y/o los costos correspondientes de reparación o reposición.";
+    const splitCondiciones = doc.splitTextToSize(condicionesText, 182);
+    
+    if (currentY + (splitCondiciones.length * 4) + 40 > 270) { 
+      doc.addPage(); 
+      currentY = 20; 
+    }
+    
+    doc.text(splitCondiciones, 14, currentY);
+
     // Signatures
-    let finalY = (doc as any).lastAutoTable.finalY + 28;
-    if (finalY > 250) { doc.addPage(); finalY = 40; }
+    let finalY = currentY + (splitCondiciones.length * 4) + 24;
 
     const adminInfo = registrador
       ? { nombre: registrador.nombre, cedula: registrador.id, cargo: registrador.cargo || 'Administrador', correo: registrador.email || '' }

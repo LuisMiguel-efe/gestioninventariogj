@@ -5,7 +5,7 @@ import { Plus, Edit2, Trash2, Search, X, Save, Smartphone, Wifi } from 'lucide-r
 const OPERADORES = ['Claro', 'Movistar', 'Tigo', 'ETB', 'Avantel', 'WOM', 'Otro'];
 
 const EMPTY_FORM = {
-  numero: '', operador: 'Tigo', planNombre: 'Paquete Datos Corporativo 4.2 Plus', precioMensual: '17532',
+  numero: '', operador: 'Tigo', planNombre: 'Paquete Datos Corporativo 4.4 Plus', precioMensual: '24002',
   fechaActivacion: '', notas: '', activa: true,
 };
 

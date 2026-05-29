@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import { Plus, Edit2, Trash2, Search, History, ChevronDown, ChevronUp, X, Save } from 'lucide-react';
 import AssetHistory from '../components/AssetHistory';
+import SearchableSelect from '../components/SearchableSelect';
 
 const TIPOS = ['laptop', 'desktop', 'tablet', 'celular', 'impresora', 'pantalla', 'accesorio'];
 const SUBTIPO_ACCESORIO = ['mouse', 'teclado', 'cargador', 'hub adaptador', 'auriculares', 'webcam', 'otro'];
@@ -242,14 +243,15 @@ const Assets: React.FC = () => {
                   </div>
                   <div className="input-group span-2">
                     <label className="input-label">Línea Móvil Asignada</label>
-                    <select className="input-field" value={formData.phoneLineId} onChange={e => set('phoneLineId', e.target.value)}>
-                      <option value="">Sin línea asignada</option>
-                      {phoneLines.map((l: any) => (
-                        <option key={l.id} value={l.id}>
-                          {l.numero} — {l.operador} {l.planNombre ? `| ${l.planNombre}` : ''} {l.precioMensual ? `| $${l.precioMensual.toLocaleString()}` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchableSelect 
+                      options={phoneLines.map((l: any) => ({
+                        value: String(l.id),
+                        label: `${l.numero} — ${l.operador} ${l.planNombre ? `| ${l.planNombre}` : ''} ${l.precioMensual ? `| $${l.precioMensual.toLocaleString()}` : ''}`
+                      }))}
+                      value={String(formData.phoneLineId || '')}
+                      onChange={val => set('phoneLineId', val)}
+                      placeholder="Sin línea asignada"
+                    />
                   </div>
                 </div>
               </div>

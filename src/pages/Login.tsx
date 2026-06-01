@@ -136,9 +136,9 @@ const Login: React.FC = () => {
             </button>
           </form>
         </div>
+        <Footer variant="login" />
       </div>
-      <Footer />
-    </div>
+
   );
 };
 

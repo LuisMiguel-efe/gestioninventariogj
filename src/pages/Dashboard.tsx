@@ -135,90 +135,80 @@ const Dashboard: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
           {/* Filtro por Tipo */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 10, color: 'var(--text-secondary)' }}>
-              🖥️ Filtrar por Tipo de Dispositivo
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              🖥️ Tipo de Dispositivo
             </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              <button
-                onClick={() => setFilterTipo('')}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  border: filterTipo === '' ? '2px solid var(--primary-main)' : '1px solid var(--border-color)',
-                  background: filterTipo === '' ? 'rgba(0,82,165,0.1)' : 'transparent',
-                  color: filterTipo === '' ? 'var(--primary-main)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.8rem',
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                Todos
-              </button>
-              {byTipo.map(({ tipo, label, color }) => (
-                <button
-                  key={tipo}
-                  onClick={() => setFilterTipo(tipo)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    border: filterTipo === tipo ? `2px solid ${color}` : '1px solid var(--border-color)',
-                    background: filterTipo === tipo ? `${color}15` : 'transparent',
-                    color: filterTipo === tipo ? color : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease',
-                  }}
-                >
+            <select
+              value={filterTipo}
+              onChange={(e) => setFilterTipo(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                border: '1.5px solid var(--border-color)',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+                color: 'var(--text-primary)',
+                background: 'linear-gradient(135deg, rgba(0,82,165,0.04) 0%, rgba(0,82,165,0.01) 100%)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                outline: 'none',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--primary-main)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,82,165,0.1)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <option value="">Todos los Dispositivos</option>
+              {byTipo.map(({ tipo, label }) => (
+                <option key={tipo} value={tipo}>
                   {label}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           {/* Filtro por Ubicación */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 10, color: 'var(--text-secondary)' }}>
-              📍 Filtrar por Área/Ubicación
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              📍 Área / Ubicación
             </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              <button
-                onClick={() => setFilterUbicacion('')}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  border: filterUbicacion === '' ? '2px solid var(--primary-main)' : '1px solid var(--border-color)',
-                  background: filterUbicacion === '' ? 'rgba(0,82,165,0.1)' : 'transparent',
-                  color: filterUbicacion === '' ? 'var(--primary-main)' : 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.8rem',
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                Todas
-              </button>
+            <select
+              value={filterUbicacion}
+              onChange={(e) => setFilterUbicacion(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                border: '1.5px solid var(--border-color)',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+                color: 'var(--text-primary)',
+                background: 'linear-gradient(135deg, rgba(49,130,206,0.04) 0%, rgba(49,130,206,0.01) 100%)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                outline: 'none',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'var(--info)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(49,130,206,0.1)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <option value="">Todas las Áreas</option>
               {byUbicacion.map(([loc]) => (
-                <button
-                  key={loc}
-                  onClick={() => setFilterUbicacion(loc)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    border: filterUbicacion === loc ? '2px solid var(--info)' : '1px solid var(--border-color)',
-                    background: filterUbicacion === loc ? 'rgba(49,130,206,0.1)' : 'transparent',
-                    color: filterUbicacion === loc ? 'var(--info)' : 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease',
-                  }}
-                >
+                <option key={loc} value={loc}>
                   {loc}
-                </button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
         </div>
       </div>

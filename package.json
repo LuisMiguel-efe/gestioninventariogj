@@ -13,8 +13,7 @@
     "preview": "vite preview",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "prisma:migrate:deploy": "prisma migrate deploy",
-    "migrate:plans": "node migrate-plans.js"
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "postinstall": "prisma generate",
   "dependencies": {

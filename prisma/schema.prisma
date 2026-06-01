@@ -74,27 +74,13 @@ model CellphoneDetail {
   phoneLine   PhoneLine? @relation(fields: [phoneLineId], references: [id])
 }
 
-// ─── PLANES MÓVILES ───────────────────────────────────────────────────────────
-model PlanMovil {
-  id        Int        @id @default(autoincrement())
-  operador  String     // Claro|Movistar|Tigo|ETB|Avantel|otro
-  plan      String     // Nombre del plan corporativo
-  precio    Float      // Precio en COP
-
-  phoneLines PhoneLine[] // Relación con líneas móviles
-
-  @@unique([operador, plan]) // Un plan único por operador
-}
-
 // ─── LÍNEAS MÓVILES ───────────────────────────────────────────────────────────
 model PhoneLine {
   id              Int               @id @default(autoincrement())
   numero          String            @unique
   operador        String                    // Claro|Movistar|Tigo|ETB|Avantel|otro
-  planNombre      String?                   // Nombre manual (heredado) o desde PlanMovil
-  precioMensual   Float?                    // Precio manual (heredado) o desde PlanMovil
-  planeId         Int?                      // FK a PlanMovil (opcional para mantener compatibilidad)
-  plane           PlanMovil?         @relation(fields: [planeId], references: [id])
+  planNombre      String?
+  precioMensual   Float?
   fechaActivacion DateTime?
   notas           String?
   activa          Boolean           @default(true)

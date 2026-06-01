@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import { Plus, Edit2, Trash2, Search, ChevronDown, ChevronUp, Laptop, X, Save } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const EMPTY_FORM = { id: '', nombre: '', email: '', rol: 'empleado', departamentoId: '', cargo: '', activo: true };
 
 const Users: React.FC = () => {
+  const { sessionUser } = useAuth();
+  const isAdmin = sessionUser?.rol === 'administrador';
+  
   const [users, setUsers] = useState<any[]>([]);
   const [departamentos, setDepartamentos] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -69,15 +73,18 @@ const Users: React.FC = () => {
           <h1>Gestión de Empleados</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: 4 }}>
             {users.length} empleados registrados · {users.filter(u => u.activo).length} activos
+            {!isAdmin && <span style={{ marginLeft: 12, color: '#f59e0b', fontWeight: 600 }}>📖 Solo lectura</span>}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setFormData(EMPTY_FORM); setIsEditing(false); setShowForm(s => !s); }}>
-          {showForm ? <><X size={16} /> Cancelar</> : <><Plus size={16} /> Nuevo Empleado</>}
-        </button>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => { setFormData(EMPTY_FORM); setIsEditing(false); setShowForm(s => !s); }}>
+            {showForm ? <><X size={16} /> Cancelar</> : <><Plus size={16} /> Nuevo Empleado</>}
+          </button>
+        )}
       </div>
 
       {/* Form */}
-      {showForm && (
+      {isAdmin && showForm && (
         <div className="form-panel">
           <h2>{isEditing ? 'Editar Empleado' : 'Registrar Nuevo Empleado'}</h2>
           <form onSubmit={handleSubmit}>
@@ -179,12 +186,16 @@ const Users: React.FC = () => {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-outline btn-icon btn-sm" onClick={() => handleEdit(user)} title="Editar">
-                          <Edit2 size={15} />
-                        </button>
-                        <button className="btn btn-danger btn-icon btn-sm" onClick={() => handleDelete(user.id)} title="Eliminar">
-                          <Trash2 size={15} />
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button className="btn btn-outline btn-icon btn-sm" onClick={() => handleEdit(user)} title="Editar">
+                              <Edit2 size={15} />
+                            </button>
+                            <button className="btn btn-danger btn-icon btn-sm" onClick={() => handleDelete(user.id)} title="Eliminar">
+                              <Trash2 size={15} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -137,7 +137,7 @@ const Login: React.FC = () => {
           </form>
         </div>
       </div>
-      <Footer class="app-footer-professional" variant="login" />
+      <Footer/>
    
   );
 };

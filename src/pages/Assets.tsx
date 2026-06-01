@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import { Plus, Edit2, Trash2, Search, History, ChevronDown, ChevronUp, X, Save } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import AssetHistory from '../components/AssetHistory';
 import SearchableSelect from '../components/SearchableSelect';
 
@@ -27,6 +28,9 @@ const EMPTY_FORM = {
 };
 
 const Assets: React.FC = () => {
+  const { sessionUser } = useAuth();
+  const isAdmin = sessionUser?.rol === 'administrador';
+  
   const [assets, setAssets] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [departamentos, setDepartamentos] = useState<any[]>([]);
@@ -126,15 +130,18 @@ const Assets: React.FC = () => {
           <h1>Inventario de Activos</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: 4 }}>
             {assets.length} equipos registrados · {assets.filter(a => a.disponibilidad === 'disponible').length} disponibles
+            {!isAdmin && <span style={{ marginLeft: 12, color: '#f59e0b', fontWeight: 600 }}>📖 Solo lectura</span>}
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setFormData(EMPTY_FORM); setIsEditing(false); setShowForm(s => !s); }}>
-          {showForm ? <><X size={16} /> Cancelar</> : <><Plus size={16} /> Nuevo Activo</>}
-        </button>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => { setFormData(EMPTY_FORM); setIsEditing(false); setShowForm(s => !s); }}>
+            {showForm ? <><X size={16} /> Cancelar</> : <><Plus size={16} /> Nuevo Activo</>}
+          </button>
+        )}
       </div>
 
       {/* Form */}
-      {showForm && (
+      {isAdmin && showForm && (
         <div className="form-panel">
           <h2>{isEditing ? 'Editar Activo' : 'Registrar Nuevo Activo'}</h2>
           <form onSubmit={handleSubmit}>
@@ -398,12 +405,16 @@ const Assets: React.FC = () => {
                         <button className="btn btn-outline btn-icon btn-sm" title="Expandir detalles" onClick={() => setExpandedRow(expandedRow === asset.id ? null : asset.id)}>
                           {expandedRow === asset.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                         </button>
-                        <button className="btn btn-outline btn-icon btn-sm" title="Editar" onClick={() => handleEdit(asset)}>
-                          <Edit2 size={15} />
-                        </button>
-                        <button className="btn btn-danger btn-icon btn-sm" title="Eliminar" onClick={() => handleDelete(asset.id)}>
-                          <Trash2 size={15} />
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button className="btn btn-outline btn-icon btn-sm" title="Editar" onClick={() => handleEdit(asset)}>
+                              <Edit2 size={15} />
+                            </button>
+                            <button className="btn btn-danger btn-icon btn-sm" title="Eliminar" onClick={() => handleDelete(asset.id)}>
+                              <Trash2 size={15} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

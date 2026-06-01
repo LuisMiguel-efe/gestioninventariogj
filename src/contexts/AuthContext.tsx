@@ -4,7 +4,7 @@ export interface SessionUser {
   cedula: string;      // ID en la BD (cédula)
   username: string;    // nombre para mostrar
   nombre: string;
-  rol: string;         // empleado | administrador
+  rol: string;         // empleado | administrador | gerente
   departamento?: string;
   cargo?: string;
   email?: string;
@@ -32,6 +32,17 @@ const ADMIN_ACCOUNTS: Record<string, { password: string; sessionUser: SessionUse
       rol: 'administrador',
       cargo: 'Jefe de Compras',
       email: 'compras@administracionesgj.com',
+    },
+  },
+  'gerenciaGJ': {
+    password: 'GJ2026inv',
+    sessionUser: {
+      cedula: 'ADC001',
+      username: 'gerenciaGJ',
+      nombre: 'Adriana Carvajal',
+      rol: 'gerente',
+      cargo: 'Gerenta de Administración',
+      email: 'gerencia@administracionesgj.com',
     },
   },
 };

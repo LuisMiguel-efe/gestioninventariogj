@@ -131,11 +131,11 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Filtros Interactivos */}
-      <div className="section-card" style={{ marginBottom: 20 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="section-card" style={{ marginBottom: 20, padding: '20px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           {/* Filtro por Tipo */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               🖥️ Tipo de Dispositivo
             </label>
             <select
@@ -143,24 +143,27 @@ const Dashboard: React.FC = () => {
               onChange={(e) => setFilterTipo(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px 14px',
+                padding: '12px 14px',
                 border: '1.5px solid var(--border-color)',
                 borderRadius: '8px',
                 fontSize: '0.9rem',
                 fontWeight: 500,
                 color: 'var(--text-primary)',
-                background: 'linear-gradient(135deg, rgba(0,82,165,0.04) 0%, rgba(0,82,165,0.01) 100%)',
+                background: 'linear-gradient(135deg, rgba(0,82,165,0.06) 0%, rgba(0,82,165,0.02) 100%)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 outline: 'none',
+                boxSizing: 'border-box',
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--primary-main)';
                 e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,82,165,0.1)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0,82,165,0.1) 0%, rgba(0,82,165,0.04) 100%)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.borderColor = 'var(--border-color)';
                 e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0,82,165,0.06) 0%, rgba(0,82,165,0.02) 100%)';
               }}
             >
               <option value="">Todos los Dispositivos</option>
@@ -174,7 +177,7 @@ const Dashboard: React.FC = () => {
 
           {/* Filtro por Ubicación */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 8, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               📍 Área / Ubicación
             </label>
             <select
@@ -182,24 +185,27 @@ const Dashboard: React.FC = () => {
               onChange={(e) => setFilterUbicacion(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px 14px',
+                padding: '12px 14px',
                 border: '1.5px solid var(--border-color)',
                 borderRadius: '8px',
                 fontSize: '0.9rem',
                 fontWeight: 500,
                 color: 'var(--text-primary)',
-                background: 'linear-gradient(135deg, rgba(49,130,206,0.04) 0%, rgba(49,130,206,0.01) 100%)',
+                background: 'linear-gradient(135deg, rgba(49,130,206,0.06) 0%, rgba(49,130,206,0.02) 100%)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 outline: 'none',
+                boxSizing: 'border-box',
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = 'var(--info)';
                 e.currentTarget.style.boxShadow = '0 0 0 3px rgba(49,130,206,0.1)';
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(49,130,206,0.1) 0%, rgba(49,130,206,0.04) 100%)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.borderColor = 'var(--border-color)';
                 e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(49,130,206,0.06) 0%, rgba(49,130,206,0.02) 100%)';
               }}
             >
               <option value="">Todas las Áreas</option>

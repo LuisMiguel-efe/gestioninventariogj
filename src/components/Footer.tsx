@@ -4,11 +4,11 @@ import './Footer.css';
 const Footer: React.FC = () => {
   return (
     <footer className="app-footer">
-      <p>Copyright © 2026. Diseño y Desarrollo: 
+      <p>© 2026 · 
         <a href="https://lmz-my-portfolio.vercel.app" target="_blank" rel="noopener noreferrer">
-          <img style={{ width: 18, height: 18, marginLeft: '6px', marginRight: '4px', verticalAlign: 'middle', borderRadius: '50%' }} src="/lmz-light.png" alt="LMZ" />
-          <b>Luis Miguel Ortiz Muñoz</b>
-        </a> · Todos los derechos reservados.
+          <img style={{ width: 12, height: 12, marginLeft: '4px', marginRight: '2px', verticalAlign: 'middle', borderRadius: '50%' }} src="/lmz-light.png" alt="LMZ" />
+          <b>Luis Miguel Ortiz</b>
+        </a>
       </p>
     </footer>
   );

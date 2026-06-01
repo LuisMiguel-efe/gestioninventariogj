@@ -318,7 +318,10 @@ app.post('/api/movements', async (req, res) => {
 app.get('/api/phonelines', async (req, res) => {
   try {
     const lines = await prisma.phoneLine.findMany({
-      include: { cellphones: { include: { asset: { select: { id: true, identificador: true, codigo: true } } } } },
+      include: {
+        cellphones: { include: { asset: { select: { id: true, identificador: true, codigo: true } } } },
+        plane: true,
+      },
       orderBy: { numero: 'asc' },
     });
     res.json(lines);
@@ -326,7 +329,7 @@ app.get('/api/phonelines', async (req, res) => {
 });
 
 app.post('/api/phonelines', async (req, res) => {
-  const { numero, operador, planNombre, precioMensual, fechaActivacion, notas, activa } = req.body;
+  const { numero, operador, planNombre, precioMensual, planeId, fechaActivacion, notas, activa } = req.body;
   try {
     const line = await prisma.phoneLine.create({
       data: {
@@ -334,17 +337,19 @@ app.post('/api/phonelines', async (req, res) => {
         operador,
         planNombre: planNombre || null,
         precioMensual: precioMensual ? Number(precioMensual) : null,
+        planeId: planeId ? Number(planeId) : null,
         fechaActivacion: fechaActivacion ? new Date(fechaActivacion) : null,
         notas: notas || null,
         activa: activa ?? true,
       },
+      include: { plane: true },
     });
     res.json(line);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/phonelines/:id', async (req, res) => {
-  const { numero, operador, planNombre, precioMensual, fechaActivacion, notas, activa } = req.body;
+  const { numero, operador, planNombre, precioMensual, planeId, fechaActivacion, notas, activa } = req.body;
   try {
     const line = await prisma.phoneLine.update({
       where: { id: Number(req.params.id) },
@@ -353,10 +358,12 @@ app.put('/api/phonelines/:id', async (req, res) => {
         operador,
         planNombre: planNombre || null,
         precioMensual: precioMensual ? Number(precioMensual) : null,
+        planeId: planeId ? Number(planeId) : null,
         fechaActivacion: fechaActivacion ? new Date(fechaActivacion) : null,
         notas: notas || null,
         activa: activa ?? true,
       },
+      include: { plane: true },
     });
     res.json(line);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -365,6 +372,48 @@ app.put('/api/phonelines/:id', async (req, res) => {
 app.delete('/api/phonelines/:id', async (req, res) => {
   try {
     await prisma.phoneLine.delete({ where: { id: Number(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── PLANES MÓVILES ───────────────────────────────────────────────────────────
+app.get('/api/plans', async (req, res) => {
+  try {
+    const plans = await prisma.planMovil.findMany({
+      orderBy: [{ operador: 'asc' }, { plan: 'asc' }],
+    });
+    res.json(plans);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/plans', async (req, res) => {
+  const { operador, plan, precio } = req.body;
+  try {
+    const planMovil = await prisma.planMovil.create({
+      data: {
+        operador,
+        plan,
+        precio: Number(precio),
+      },
+    });
+    res.json(planMovil);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/plans/:id', async (req, res) => {
+  const { operador, plan, precio } = req.body;
+  try {
+    const planMovil = await prisma.planMovil.update({
+      where: { id: Number(req.params.id) },
+      data: { operador, plan, precio: Number(precio) },
+    });
+    res.json(planMovil);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/plans/:id', async (req, res) => {
+  try {
+    await prisma.planMovil.delete({ where: { id: Number(req.params.id) } });
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

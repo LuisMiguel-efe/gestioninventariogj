@@ -67,4 +67,13 @@ export const api = {
     request(`${API_URL}/phonelines/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   deletePhoneLine: (id: number) =>
     request(`${API_URL}/phonelines/${id}`, { method: 'DELETE' }),
+
+  // ─── PLANES MÓVILES ───────────────────────────────────────────────────────
+  getPlans: () => request(`${API_URL}/plans`),
+  addPlan: (data: any) =>
+    request(`${API_URL}/plans`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updatePlan: (id: number, data: any) =>
+    request(`${API_URL}/plans/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  deletePlan: (id: number) =>
+    request(`${API_URL}/plans/${id}`, { method: 'DELETE' }),
 };

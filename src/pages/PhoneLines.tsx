@@ -5,12 +5,13 @@ import { Plus, Edit2, Trash2, Search, X, Save, Smartphone, Wifi } from 'lucide-r
 const OPERADORES = ['Claro', 'Movistar', 'Tigo', 'ETB', 'Avantel', 'WOM', 'Otro'];
 
 const EMPTY_FORM = {
-  numero: '', operador: 'Tigo', planNombre: 'Paquete Datos Corporativo 4.4 Plus', precioMensual: '24002',
+  numero: '', operador: 'Tigo', planeId: '', planNombre: '', precioMensual: '',
   fechaActivacion: '', notas: '', activa: true,
 };
 
 const PhoneLines: React.FC = () => {
   const [lines, setLines] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>(EMPTY_FORM);
@@ -18,7 +19,9 @@ const PhoneLines: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
-    setLines(await api.getPhoneLines());
+    const [linesData, plansData] = await Promise.all([api.getPhoneLines(), api.getPlans()]);
+    setLines(linesData);
+    setPlans(plansData);
   };
   useEffect(() => { fetchData(); }, []);
 
@@ -43,11 +46,28 @@ const PhoneLines: React.FC = () => {
   const handleEdit = (line: any) => {
     setFormData({
       ...line,
+      planeId: line.planeId ? String(line.planeId) : '',
+      planNombre: line.planNombre || '',
       precioMensual: line.precioMensual ? String(line.precioMensual) : '',
       fechaActivacion: line.fechaActivacion ? line.fechaActivacion.split('T')[0] : '',
     });
     setIsEditing(true);
     setShowForm(true);
+  };
+
+  const handlePlanChange = (planeId: string) => {
+    set('planeId', planeId);
+    if (planeId) {
+      const plan = plans.find(p => String(p.id) === planeId);
+      if (plan) {
+        set('planNombre', plan.plan);
+        set('precioMensual', String(plan.precio));
+        set('operador', plan.operador);
+      }
+    } else {
+      set('planNombre', '');
+      set('precioMensual', '');
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -131,20 +151,31 @@ const PhoneLines: React.FC = () => {
                   placeholder="Ej: 3001234567" disabled={isEditing} />
               </div>
               <div className="input-group">
+                <label className="input-label">Plan Corporativo</label>
+                <select className="input-field" value={formData.planeId} onChange={e => handlePlanChange(e.target.value)}>
+                  <option value="">-- Seleccionar plan o ingresar manualmente --</option>
+                  {plans.map(p => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.operador} - {p.plan} (${Number(p.precio).toLocaleString('es-CO')})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="input-group">
                 <label className="input-label">Operador *</label>
                 <select required className="input-field" value={formData.operador} onChange={e => set('operador', e.target.value)}>
                   {OPERADORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div className="input-group">
-                <label className="input-label">Nombre del Plan</label>
+                <label className="input-label">Nombre del Plan {formData.planeId && '(desde plan corporativo)'}</label>
                 <input className="input-field" value={formData.planNombre} onChange={e => set('planNombre', e.target.value)}
-                  placeholder="Ej: Plan Empresarial 10GB" />
+                  placeholder="Ej: Plan Empresarial 10GB" disabled={!!formData.planeId} />
               </div>
               <div className="input-group">
-                <label className="input-label">Precio Mensual (COP)</label>
+                <label className="input-label">Precio Mensual (COP) {formData.planeId && '(desde plan corporativo)'}</label>
                 <input type="number" className="input-field" value={formData.precioMensual} onChange={e => set('precioMensual', e.target.value)}
-                  placeholder="0" />
+                  placeholder="0" disabled={!!formData.planeId} />
               </div>
               <div className="input-group">
                 <label className="input-label">Fecha de Activación</label>

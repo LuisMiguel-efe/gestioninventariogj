@@ -149,7 +149,7 @@ const Layout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main style={{ flex: 1, marginLeft: sidebarWidth, padding: '28px 32px', minHeight: '100vh', transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+      <main style={{ flex: 1, marginLeft: sidebarWidth, padding: '28px 32px 60px', minHeight: '100vh', transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         <div className="animate-fade-in">
           <Outlet />
         </div>

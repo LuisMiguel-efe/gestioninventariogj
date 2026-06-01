@@ -8,7 +8,6 @@ import Assets from './pages/Assets';
 import Users from './pages/Users';
 import Movements from './pages/Movements';
 import PhoneLines from './pages/PhoneLines';
-import Footer from './components/Footer';
 
 function App() {
   return (
@@ -32,7 +31,6 @@ function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <Footer />
       </AuthProvider>
     </BrowserRouter>
   );

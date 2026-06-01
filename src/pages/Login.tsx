@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import Footer from '../components/Footer';
 import './Login.css';
 
 const Login: React.FC = () => {
@@ -65,18 +64,17 @@ const Login: React.FC = () => {
   };
 
   return (
-    <>
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-logo">
-            <img src="/logogj.png" alt="Logo GJ" />
-          </div>
-          <div className="login-header">
-            <h1>Gestión de Inventario</h1>
-            <p>Administraciones GJ</p>
-          </div>
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-logo">
+          <img src="/logogj.png" alt="Logo GJ" />
+        </div>
+        <div className="login-header">
+          <h1>Gestión de Inventario</h1>
+          <p>Administraciones GJ</p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
               <label htmlFor="username">Usuario</label>
               <input
@@ -137,8 +135,7 @@ const Login: React.FC = () => {
           </form>
         </div>
       </div>
-      <Footer />
-    </>
+    </div>
   );
 };
 

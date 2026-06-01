@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 import './Login.css';
+import Footer from '../components/Footer';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -136,7 +137,8 @@ const Login: React.FC = () => {
           </form>
         </div>
       </div>
-    
+      <Footer class="app-footer-professional" variant="login" />
+   
   );
 };
 

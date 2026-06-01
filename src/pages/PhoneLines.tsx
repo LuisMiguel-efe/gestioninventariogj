@@ -15,6 +15,7 @@ const PhoneLines: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>(EMPTY_FORM);
   const [filterText, setFilterText] = useState('');
+  const [filterOperador, setFilterOperador] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
@@ -59,18 +60,20 @@ const PhoneLines: React.FC = () => {
 
   const filtered = useMemo(() => lines.filter(l => {
     const text = filterText.toLowerCase();
-    return !filterText ||
+    const matchesText = !filterText ||
       l.numero.toLowerCase().includes(text) ||
       l.operador.toLowerCase().includes(text) ||
       l.planNombre?.toLowerCase().includes(text);
-  }), [lines, filterText]);
+    const matchesOperador = !filterOperador || l.operador === filterOperador;
+    return matchesText && matchesOperador;
+  }), [lines, filterText, filterOperador]);
 
   const set = (field: string, value: any) => setFormData((p: any) => ({ ...p, [field]: value }));
 
-  // Stats
-  const totalMensual = lines.filter(l => l.activa && l.precioMensual).reduce((s, l) => s + l.precioMensual, 0);
-  const activas = lines.filter(l => l.activa).length;
-  const asignadas = lines.filter(l => l.cellphones && l.cellphones.length > 0).length;
+  // Stats - basados en los datos filtrados
+  const totalMensual = filtered.filter(l => l.activa && l.precioMensual).reduce((s, l) => s + l.precioMensual, 0);
+  const activas = filtered.filter(l => l.activa).length;
+  const asignadas = filtered.filter(l => l.cellphones && l.cellphones.length > 0).length;
 
   return (
     <div className="animate-fade-in">
@@ -86,13 +89,53 @@ const PhoneLines: React.FC = () => {
         </button>
       </div>
 
+      {/* Operator Filter */}
+      <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Filtrar por operador:</span>
+        <button
+          onClick={() => setFilterOperador('')}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '20px',
+            border: filterOperador === '' ? '2px solid var(--primary-main)' : '1px solid var(--border-color)',
+            background: filterOperador === '' ? 'rgba(0,82,165,0.1)' : 'transparent',
+            color: filterOperador === '' ? 'var(--primary-main)' : 'var(--text-secondary)',
+            cursor: 'pointer',
+            fontSize: '0.85rem',
+            fontWeight: 500,
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Todos
+        </button>
+        {OPERADORES.map(op => (
+          <button
+            key={op}
+            onClick={() => setFilterOperador(op)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '20px',
+              border: filterOperador === op ? '2px solid var(--primary-main)' : '1px solid var(--border-color)',
+              background: filterOperador === op ? 'rgba(0,82,165,0.1)' : 'transparent',
+              color: filterOperador === op ? 'var(--primary-main)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: 500,
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {op}
+          </button>
+        ))}
+      </div>
+
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'rgba(0,82,165,0.1)', color: 'var(--primary-main)' }}>
             <Wifi size={22} />
           </div>
-          <div><div className="stat-value">{lines.length}</div><div className="stat-label">Total Líneas</div></div>
+          <div><div className="stat-value">{filtered.length}</div><div className="stat-label">Total Líneas</div></div>
         </div>
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'rgba(14,164,114,0.1)', color: 'var(--success)' }}>
@@ -114,7 +157,7 @@ const PhoneLines: React.FC = () => {
             <div className="stat-value" style={{ color: '#7c3aed', fontSize: '1.3rem' }}>
               ${totalMensual.toLocaleString('es-CO')}
             </div>
-            <div className="stat-label">Total Mensual COP</div>
+            <div className="stat-label">Total Mensual SIN IVA</div>
           </div>
         </div>
       </div>

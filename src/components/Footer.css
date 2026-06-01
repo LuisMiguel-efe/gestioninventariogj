@@ -1,57 +1,69 @@
-.app-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #333333;
-  text-align: center;
-  padding: 12px 20px;
-  font-size: 13px;
+.app-footer-professional {
+  background: linear-gradient(135deg, #0a1e3e 0%, #001a3e 50%, #0a1e3e 100%);
+  color: #e8eef5;
   font-family: 'Outfit', 'Inter', system-ui, sans-serif;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
-  z-index: 999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  padding: 32px;
+  border-top: 1px solid rgba(56, 182, 255, 0.15);
+  margin-top: 60px;
 }
 
-.app-footer p {
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footer-line {
+  font-size: 0.95rem;
+  line-height: 1.4;
   margin: 0;
-  letter-spacing: 0.3px;
+  color: rgba(232, 238, 245, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 4px;
 }
 
-.app-footer a {
-  color: #023e8a;
+.footer-line a {
+  color: #38b6ff;
   text-decoration: none;
   font-weight: 600;
+  transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
-  transition: all 0.2s ease;
-  padding: 2px 6px;
-  border-radius: 4px;
+  gap: 6px;
 }
 
-.app-footer a:hover {
-  background: rgba(2, 62, 138, 0.08);
-  color: #002b63;
+.footer-line a:hover {
+  color: #6dd5f5;
+  text-decoration: underline;
 }
 
+.footer-line img {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+/* ── RESPONSIVE ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .app-footer {
-    font-size: 11px;
-    padding: 10px 15px;
+  .app-footer-professional {
+    padding: 24px 20px;
+    margin-top: 40px;
   }
-  
-  .app-footer p {
-    gap: 3px;
+
+  .footer-line {
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+
+  .footer-line img {
+    width: 16px;
+    height: 16px;
   }
 }

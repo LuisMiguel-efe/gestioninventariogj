@@ -64,9 +64,14 @@ const Layout: React.FC = () => {
           justifyContent: isCollapsed ? 'center' : 'flex-start',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: '#d1dfe1ff', borderRadius: '12px', padding: '6px', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-              <img src="/logogj.png" alt="GJ Logo" width={36} height={40} style={{ display: 'block' }} />
+            <div>
+              <img
+                src="https://administracionesgj.com/wp-content/uploads/web-manual/assets/images/logo-gj-blanco.png"
+                alt="GJ Logo"
+                style={{ width: '36px', height: 'auto', objectFit: 'contain', display: 'block' }}
+              />
             </div>
+
             {!isCollapsed && (
               <div style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}>
                 <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -145,6 +150,48 @@ const Layout: React.FC = () => {
             <LogOut size={16} />
             {!isCollapsed && <span>Cerrar Sesión</span>}
           </button>
+        </div>
+
+        {/* Developer credit */}
+        <div style={{
+          padding: isCollapsed ? '10px 8px' : '10px 16px',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
+          alignItems: 'center',
+        }}>
+          <a
+            href="https://lmz-my-portfolio.vercel.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Luis Miguel Ortiz Muñoz — Portafolio"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textDecoration: 'none',
+              opacity: 0.45,
+              transition: 'opacity 0.2s',
+            }}
+            onMouseOver={e => { (e.currentTarget as HTMLElement).style.opacity = '0.8'; }}
+            onMouseOut={e => { (e.currentTarget as HTMLElement).style.opacity = '0.45'; }}
+          >
+            <img
+              src="/lmz-light.png"
+              alt="LMZ"
+              style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, objectFit: 'contain' }}
+            />
+            {!isCollapsed && (
+              <div style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1 }}>
+                  Diseño &amp; Desarrollo
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.72rem', fontWeight: 600, lineHeight: 1.3, marginTop: 2 }}>
+                  Luis Miguel Ortiz Muñoz
+                </div>
+              </div>
+            )}
+          </a>
         </div>
       </aside>
 

@@ -112,24 +112,88 @@ const Movements: React.FC = () => {
       const assignedUser = users.find(u => String(u.id) === String(formData.userId));
 
       if (asset) {
-        const update: any = { ...asset };
+        // Solo enviamos los campos de logística que cambian en un movimiento.
+        // Nunca tocamos imei, phoneLineId, printerDetail, etc. para no perder esa info.
+        const baseUpdate = {
+          codigo: asset.codigo,
+          identificador: asset.identificador,
+          tipo: asset.tipo,
+          subTipo: asset.subTipo,
+          marca: asset.marca,
+          modelo: asset.modelo,
+          procesador: asset.procesador,
+          condicion: formData.condicionEntrega || asset.condicion,
+          estado: asset.estado,
+          disponibilidad: asset.disponibilidad,
+          ubicacion: asset.ubicacion,
+          departamentoId: asset.departamentoId,
+          propietarioId: asset.propietarioId,
+          fechaAdquisicion: asset.fechaAdquisicion,
+          valorAdquisicion: asset.valorAdquisicion,
+          notas: asset.notas,
+          detallesAdicionales: asset.detallesAdicionales,
+          // Preservar detalles específicos según tipo
+          ...(asset.tipo === 'celular' && asset.cellphoneDetail ? {
+            imei: asset.cellphoneDetail.imei,
+            imei2: asset.cellphoneDetail.imei2,
+            phoneLineId: asset.cellphoneDetail.phoneLineId,
+          } : {}),
+          ...(asset.tipo === 'impresora' && asset.printerDetail ? {
+            referenciaEquipo: asset.printerDetail.referenciaEquipo,
+            precioToner: asset.printerDetail.precioToner,
+            costoPromImpresion: asset.printerDetail.costoPromImpresion,
+            tipoImpresion: asset.printerDetail.tipoImpresion,
+          } : {}),
+        };
+
         if (['asignacion', 'cambio', 'prestamo'].includes(formData.tipo)) {
-          update.disponibilidad = formData.tipo === 'prestamo' ? 'prestado' : 'asignado';
-          update.propietarioId = formData.userId;
-          if (assignedUser?.departamento) update.ubicacion = assignedUser.departamento.nombre;
+          baseUpdate.disponibilidad = formData.tipo === 'prestamo' ? 'prestado' : 'asignado';
+          baseUpdate.propietarioId = formData.userId;
+          if (assignedUser?.departamento) baseUpdate.ubicacion = assignedUser.departamento.nombre;
         } else if (['devolucion', 'retorno_prestamo'].includes(formData.tipo)) {
-          update.disponibilidad = 'disponible';
-          update.propietarioId = null;
-          update.ubicacion = 'Bodega Compras';
+          baseUpdate.disponibilidad = 'disponible';
+          baseUpdate.propietarioId = null;
+          baseUpdate.ubicacion = 'Bodega Compras';
         }
-        await api.updateAsset(asset.id, update);
+        await api.updateAsset(asset.id, baseUpdate);
       }
 
       // En cambio: devolver el equipo anterior
       if (formData.tipo === 'cambio' && formData.secondaryAssetId) {
         const oldAsset = assets.find(a => a.id === formData.secondaryAssetId);
         if (oldAsset) {
-          await api.updateAsset(oldAsset.id, { ...oldAsset, disponibilidad: 'disponible', propietarioId: null, ubicacion: 'Bodega Compras' });
+          const oldBaseUpdate = {
+            codigo: oldAsset.codigo,
+            identificador: oldAsset.identificador,
+            tipo: oldAsset.tipo,
+            subTipo: oldAsset.subTipo,
+            marca: oldAsset.marca,
+            modelo: oldAsset.modelo,
+            procesador: oldAsset.procesador,
+            condicion: formData.condicionRecepcion || oldAsset.condicion,
+            estado: oldAsset.estado,
+            disponibilidad: 'disponible',
+            ubicacion: 'Bodega Compras',
+            departamentoId: oldAsset.departamentoId,
+            propietarioId: null,
+            fechaAdquisicion: oldAsset.fechaAdquisicion,
+            valorAdquisicion: oldAsset.valorAdquisicion,
+            notas: oldAsset.notas,
+            detallesAdicionales: oldAsset.detallesAdicionales,
+            // Preservar detalles específicos según tipo
+            ...(oldAsset.tipo === 'celular' && oldAsset.cellphoneDetail ? {
+              imei: oldAsset.cellphoneDetail.imei,
+              imei2: oldAsset.cellphoneDetail.imei2,
+              phoneLineId: oldAsset.cellphoneDetail.phoneLineId,
+            } : {}),
+            ...(oldAsset.tipo === 'impresora' && oldAsset.printerDetail ? {
+              referenciaEquipo: oldAsset.printerDetail.referenciaEquipo,
+              precioToner: oldAsset.printerDetail.precioToner,
+              costoPromImpresion: oldAsset.printerDetail.costoPromImpresion,
+              tipoImpresion: oldAsset.printerDetail.tipoImpresion,
+            } : {}),
+          };
+          await api.updateAsset(oldAsset.id, oldBaseUpdate);
         }
       }
 
@@ -145,16 +209,26 @@ const Movements: React.FC = () => {
   };
 
   const generatePDF = async (movement: any) => {
-    const doc = new jsPDF();
     const asset = assets.find(a => a.id === movement.assetId);
     const secondaryAsset = assets.find(a => a.id === movement.secondaryAssetId);
     const user = users.find(u => String(u.id) === String(movement.userId));
     const registrador = users.find(u => String(u.id) === String(movement.registradoPorId));
 
-    let headerImg: HTMLImageElement | null = null;
-    let footerImg: HTMLImageElement | null = null;
-    try { headerImg = await loadImage('/header.png'); } catch { }
-    try { footerImg = await loadImage('/footer.png'); } catch { }
+    // Cargar membrete completo
+    let membreteImg: HTMLImageElement | null = null;
+    try { membreteImg = await loadImage('/membretegj.png'); } catch { }
+
+    // Helper: dibuja el membrete como fondo de página completa (A4 = 210×297 mm)
+    const drawMembrete = () => {
+      if (membreteImg) {
+        doc.addImage(membreteImg, 'PNG', 0, 0, 210, 297);
+      }
+    };
+
+    const doc = new jsPDF();
+
+    // Dibujar membrete en la página 1 ANTES del contenido
+    drawMembrete();
 
     const fechaFormat = new Date(movement.fecha).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
     const tipoLabel = MOVIMIENTO_LABELS[movement.tipo] || movement.tipo;
@@ -163,8 +237,10 @@ const Movements: React.FC = () => {
     doc.setFontSize(11);
     doc.text(`Santiago de Cali, ${fechaFormat}`, 14, 48);
     doc.text('Cordial saludo.', 14, 56);
-    doc.setFontSize(11);
     doc.text(`Mediante el presente documento se registra ${tipoLabel.toUpperCase()} de equipo con los siguientes detalles:`, 14, 64);
+
+    // Callback que redibuja el membrete cada vez que autoTable añade una nueva página
+    const didAddPage = () => { drawMembrete(); };
 
     // Asset details table
     autoTable(doc, {
@@ -185,6 +261,7 @@ const Movements: React.FC = () => {
       theme: 'grid',
       headStyles: { fillColor: false, textColor: [0, 0, 0], fontStyle: 'bold' },
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+      didDrawPage: didAddPage,
     });
 
     // Secondary asset table (cambio)
@@ -201,6 +278,7 @@ const Movements: React.FC = () => {
         theme: 'grid',
         headStyles: { fillColor: false, textColor: [0, 0, 0], fontStyle: 'bold' },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+        didDrawPage: didAddPage,
       });
     }
 
@@ -210,12 +288,13 @@ const Movements: React.FC = () => {
     doc.setFont('helvetica', 'normal');
     const condicionesText = "Condiciones de Uso: El presente equipo es una herramienta de trabajo proporcionada exclusivamente para el desempeño de sus labores en la empresa. El empleado se compromete a darle un uso adecuado, velar por su cuidado y seguridad. Asimismo, se compromete a reportar de manera inmediata cualquier fallo, daño, pérdida o robo. En caso de comprobarse que el equipo sufrió daños, pérdida o afectación por negligencia, descuido o mal uso, el empleado asumirá la responsabilidad y/o los costos correspondientes de reparación o reposición.";
     const splitCondiciones = doc.splitTextToSize(condicionesText, 182);
-    
-    if (currentY + (splitCondiciones.length * 4) + 40 > 270) { 
-      doc.addPage(); 
-      currentY = 20; 
+
+    if (currentY + (splitCondiciones.length * 4) + 40 > 270) {
+      doc.addPage();
+      drawMembrete();
+      currentY = 20;
     }
-    
+
     doc.text(splitCondiciones, 14, currentY);
 
     // Signatures
@@ -236,17 +315,6 @@ const Movements: React.FC = () => {
       ? [userInfo, adminInfo]
       : [adminInfo, userInfo];
 
-    const drawSignature = (x: number, person: any) => {
-      doc.line(x, finalY, x + 60, finalY);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold'); doc.text('Firma quien entrega', x, finalY + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Nombre: ${person.nombre}`, x, finalY + 11);
-      doc.text(`C.C: ${person.cedula}`, x, finalY + 17);
-      if (person.cargo) doc.text(`Cargo: ${person.cargo}`, x, finalY + 23);
-      if (person.correo) doc.text(`Correo: ${person.correo}`, x, finalY + 29);
-    };
-
     doc.line(14, finalY, 74, finalY);
     doc.setFontSize(9); doc.setFont('helvetica', 'bold');
     doc.text('Firma quien entrega:', 14, finalY + 5);
@@ -264,21 +332,6 @@ const Movements: React.FC = () => {
     doc.text(`C.C: ${recibe.cedula}`, 120, finalY + 17);
     if (recibe.cargo) doc.text(`Cargo: ${recibe.cargo}`, 120, finalY + 23);
     if (recibe.correo) doc.text(`Correo: ${recibe.correo}`, 120, finalY + 29);
-
-    // Header/Footer on all pages
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      if (headerImg) {
-        const r = headerImg.width / headerImg.height;
-        doc.addImage(headerImg, 'PNG', 0, 0, 210, 210 / r);
-      }
-      if (footerImg) {
-        const r = footerImg.width / footerImg.height;
-        const h = 210 / r;
-        doc.addImage(footerImg, 'PNG', 0, 297 - h, 210, h);
-      }
-    }
 
     doc.save(`Acta_${tipoLabel}_${user?.id || movement.userId}_${new Date().toISOString().split('T')[0]}.pdf`);
   };

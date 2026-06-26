@@ -14,6 +14,13 @@ const BADGE_DISPO: Record<string, string> = {
   asignado: 'badge-asignado',
   prestado: 'badge-prestado',
   'en reparacion': 'badge-enreparacion',
+  'no disponible': 'badge-baja',
+};
+
+const BADGE_ESTADO: Record<string, string> = {
+  activo: 'badge-activo',
+  inactivo: 'badge-cambio',
+  baja: 'badge-inactivo',
 };
 
 const EMPTY_FORM = {
@@ -30,7 +37,7 @@ const EMPTY_FORM = {
 const Assets: React.FC = () => {
   const { sessionUser } = useAuth();
   const isAdmin = sessionUser?.rol === 'administrador';
-  
+
   const [assets, setAssets] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [departamentos, setDepartamentos] = useState<any[]>([]);
@@ -40,6 +47,7 @@ const Assets: React.FC = () => {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterDispo, setFilterDispo] = useState('');
   const [filterCedula, setFilterCedula] = useState('');
+  const [filterDepartamento, setFilterDepartamento] = useState('');
 
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<any>(EMPTY_FORM);
@@ -118,8 +126,9 @@ const Assets: React.FC = () => {
     const matchTipo = !filterTipo || a.tipo === filterTipo;
     const matchDispo = !filterDispo || a.disponibilidad === filterDispo;
     const matchCedula = !filterCedula || String(a.propietarioId).includes(filterCedula);
-    return matchText && matchTipo && matchDispo && matchCedula;
-  }), [assets, filterText, filterTipo, filterDispo, filterCedula]);
+    const matchDepartamento = !filterDepartamento || String(a.departamentoId) === filterDepartamento;
+    return matchText && matchTipo && matchDispo && matchCedula && matchDepartamento;
+  }), [assets, filterText, filterTipo, filterDispo, filterCedula, filterDepartamento]);
 
   const set = (field: string, value: any) => setFormData((p: any) => ({ ...p, [field]: value }));
 
@@ -205,6 +214,7 @@ const Assets: React.FC = () => {
                   <option value="asignado">Asignado</option>
                   <option value="prestado">En Préstamo</option>
                   <option value="en reparacion">En Reparación</option>
+                  <option value="no disponible">No disponible (Dado de baja)</option>
                 </select>
               </div>
               <div className="input-group">
@@ -250,7 +260,7 @@ const Assets: React.FC = () => {
                   </div>
                   <div className="input-group span-2">
                     <label className="input-label">Línea Móvil Asignada</label>
-                    <SearchableSelect 
+                    <SearchableSelect
                       options={phoneLines.map((l: any) => ({
                         value: String(l.id),
                         label: `${l.numero} — ${l.operador} ${l.planNombre ? `| ${l.planNombre}` : ''} ${l.precioMensual ? `| $${l.precioMensual.toLocaleString()}` : ''}`
@@ -335,6 +345,11 @@ const Assets: React.FC = () => {
           <option value="asignado">Asignado</option>
           <option value="prestado">En Préstamo</option>
           <option value="en reparacion">En Reparación</option>
+          <option value="no disponible">No disponible</option>
+        </select>
+        <select className="input-field" style={{ maxWidth: 200 }} value={filterDepartamento} onChange={e => setFilterDepartamento(e.target.value)}>
+          <option value="">Todas las áreas</option>
+          {departamentos.map((d: any) => <option key={d.id} value={String(d.id)}>{d.nombre}</option>)}
         </select>
       </div>
 
@@ -352,6 +367,7 @@ const Assets: React.FC = () => {
               <th>Serial / Código</th>
               <th>Ubicación</th>
               <th>Asignado a</th>
+              <th>Estado</th>
               <th>Condición</th>
               <th>Disponibilidad</th>
               <th>Acciones</th>
@@ -359,7 +375,7 @@ const Assets: React.FC = () => {
           </thead>
           <tbody>
             {filtered.length === 0
-              ? <tr><td colSpan={8}><div className="empty-state"><p>No se encontraron activos con esos filtros.</p></div></td></tr>
+              ? <tr><td colSpan={9}><div className="empty-state"><p>No se encontraron activos con esos filtros.</p></div></td></tr>
               : filtered.map(asset => (
                 <React.Fragment key={asset.id}>
                   <tr>
@@ -386,6 +402,11 @@ const Assets: React.FC = () => {
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>C.C. {asset.propietario.id}</div>
                         </div>
                         : <span style={{ color: 'var(--text-muted)' }}>Sin asignar</span>}
+                    </td>
+                    <td>
+                      <span className={`badge ${BADGE_ESTADO[asset.estado] || 'badge-cambio'}`} style={{ textTransform: 'capitalize' }}>
+                        {asset.estado === 'baja' ? 'Dado de baja' : asset.estado}
+                      </span>
                     </td>
                     <td>
                       <span className={`badge ${asset.condicion === 'bueno' ? 'badge-activo' : asset.condicion === 'dañado' ? 'badge-inactivo' : 'badge-cambio'}`}>
@@ -421,7 +442,7 @@ const Assets: React.FC = () => {
                   {/* Expanded row */}
                   {expandedRow === asset.id && (
                     <tr>
-                      <td colSpan={8} style={{ padding: 0, background: 'rgba(0,82,165,0.02)' }}>
+                      <td colSpan={9} style={{ padding: 0, background: 'rgba(0,82,165,0.02)' }}>
                         <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
                           <InfoItem label="Estado" value={asset.estado} />
                           {asset.valorAdquisicion && <InfoItem label="Valor adquisición" value={`$${Number(asset.valorAdquisicion).toLocaleString('es-CO')} COP`} />}

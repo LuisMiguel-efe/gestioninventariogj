@@ -8,6 +8,8 @@ import Assets from './pages/Assets';
 import Users from './pages/Users';
 import Movements from './pages/Movements';
 import PhoneLines from './pages/PhoneLines';
+import Herramientas from './pages/Herramientas';
+import HerramientaMovements from './pages/HerramientaMovements';
 
 function App() {
   return (
@@ -28,6 +30,8 @@ function App() {
             <Route path="users" element={<Users />} />
             <Route path="movements" element={<Movements />} />
             <Route path="phonelines" element={<PhoneLines />} />
+            <Route path="herramientas" element={<Herramientas />} />
+            <Route path="herramientas/movimientos" element={<HerramientaMovements />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

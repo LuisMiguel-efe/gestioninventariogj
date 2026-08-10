@@ -1,6 +1,7 @@
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
-import { Plus, Edit2, Trash2, Search, History, ChevronDown, ChevronUp, X, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, History, ChevronDown, ChevronUp, X, Save, Wrench } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import AssetHistory from '../components/AssetHistory';
 import SearchableSelect from '../components/SearchableSelect';
@@ -36,6 +37,7 @@ const EMPTY_FORM = {
 
 const Assets: React.FC = () => {
   const { sessionUser } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = sessionUser?.rol === 'administrador';
 
   const [assets, setAssets] = useState<any[]>([]);
@@ -142,13 +144,22 @@ const Assets: React.FC = () => {
             {!isAdmin && <span style={{ marginLeft: 12, color: '#f59e0b', fontWeight: 600 }}>📖 Solo lectura</span>}
           </p>
         </div>
+         <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-outline" onClick={() => navigate('/herramientas')}>
+            <Wrench size={16} /> Ver Herramientas
+          </button>
+          {isAdmin && (
+            <button className="btn btn-primary" onClick={() => { setFormData(EMPTY_FORM); setIsEditing(false); setShowForm(s => !s); }}>
+              {showForm ? <><X size={16} /> Cancelar</> : <><Plus size={16} /> Nuevo Activo</>}
+            </button>
+          )}
         {isAdmin && (
           <button className="btn btn-primary" onClick={() => { setFormData(EMPTY_FORM); setIsEditing(false); setShowForm(s => !s); }}>
             {showForm ? <><X size={16} /> Cancelar</> : <><Plus size={16} /> Nuevo Activo</>}
           </button>
         )}
       </div>
-
+      </div>
       {/* Form */}
       {isAdmin && showForm && (
         <div className="form-panel">

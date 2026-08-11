@@ -14,6 +14,7 @@ model Departamento {
 
   users  User[]
   assets Asset[]
+  herramientas Herramienta[]
 }
 
 // ─── USUARIOS ─────────────────────────────────────────────────────────────────
@@ -28,8 +29,11 @@ model User {
   activo              Boolean      @default(true)
 
   ownedAssets         Asset[]      @relation("AssetOwner")
+  ownedHerramientas Herramienta[]  @relation("HerramientaOwner")
   movements           Movement[]   @relation("MovementUser")
   registeredMovements Movement[]   @relation("MovementRegistrar")
+  herramientaMovements           HerramientaMovement[] @relation("HerramientaMovementUser")
+  registeredHerramientaMovements HerramientaMovement[] @relation("HerramientaMovementRegistrar")
 }
 
 // ─── ACTIVOS ──────────────────────────────────────────────────────────────────
@@ -61,6 +65,32 @@ model Asset {
 
   movements           Movement[]    @relation("MovementAsset")
   secondaryMovements  Movement[]    @relation("MovementSecondaryAsset")
+}
+
+// ─── HERRAMIENTAS DE CONSTRUCCIÓN ──────────────────────────────────────────
+model Herramienta {
+  id                  Int           @id @default(autoincrement())
+  codigo              String        @unique   // Serial / código de inventario
+  identificador       String?                 // Nombre amigable ej. "taladro01"
+  nombre              String                  // Nombre del tipo de herramienta ej. "Taladro percutor"
+  categoria           String                  // manual|electrica|medicion|seguridad|equipo_pesado|otro
+  marca               String
+  modelo              String
+  condicion           String        @default("bueno")        // bueno|regular|dañado
+  estado              String        @default("activo")       // activo|inactivo|baja
+  disponibilidad      String        @default("disponible")   // disponible|asignado|prestado|en reparacion|no disponible
+  cantidad            Int           @default(1)
+  ubicacion           String?
+  departamentoId      Int?
+  departamentoRef     Departamento? @relation(fields: [departamentoId], references: [id])
+  propietarioId       String?
+  propietario         User?         @relation("HerramientaOwner", fields: [propietarioId], references: [id])
+  fechaAdquisicion    DateTime?
+  valorAdquisicion    Float?
+  notas               String?
+  detallesAdicionales String?
+  movements            HerramientaMovement[] @relation("HerramientaMovementHerramienta")
+  secondaryMovements   HerramientaMovement[] @relation("HerramientaMovementSecondaryHerramienta")
 }
 
 // ─── DETALLE CELULAR ──────────────────────────────────────────────────────────
@@ -117,4 +147,24 @@ model Movement {
   secondaryAsset      Asset?   @relation("MovementSecondaryAsset", fields: [secondaryAssetId], references: [id])
   user                User     @relation("MovementUser", fields: [userId], references: [id])
   registradoPor       User     @relation("MovementRegistrar", fields: [registradoPorId], references: [id])
+}
+
+// ─── MOVIMIENTOS DE HERRAMIENTAS ───────────────────────────────────────────────
+model HerramientaMovement {
+  id                   Int         @id @default(autoincrement())
+  herramientaId        Int
+  secondaryHerramientaId Int?      // Para cambios: la herramienta que se devuelve
+  userId               String      // Empleado que recibe o entrega
+  registradoPorId      String      // Admin que registra el acta
+  tipo                 String      // asignacion|devolucion|cambio|prestamo|retorno_prestamo
+  fecha                DateTime    @default(now())
+  fechaRetornoPrevista DateTime?   // Para préstamos
+  condicionEntrega     String?
+  condicionRecepcion   String?
+  notas                String?
+
+  herramienta          Herramienta  @relation("HerramientaMovementHerramienta", fields: [herramientaId], references: [id])
+  secondaryHerramienta Herramienta? @relation("HerramientaMovementSecondaryHerramienta", fields: [secondaryHerramientaId], references: [id])
+  user                 User         @relation("HerramientaMovementUser", fields: [userId], references: [id])
+  registradoPor        User         @relation("HerramientaMovementRegistrar", fields: [registradoPorId], references: [id])
 }

@@ -268,6 +268,145 @@ app.delete('/api/assets/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── HERRAMIENTAS ─────────────────────────────────────────────────────────────
+app.get('/api/herramientas', async (req, res) => {
+  try {
+    const { categoria, disponibilidad } = req.query;
+    const where = {};
+    if (categoria) where.categoria = categoria;
+    if (disponibilidad) where.disponibilidad = disponibilidad;
+
+    const herramientas = await prisma.herramienta.findMany({
+      where,
+      include: {
+        propietario: { select: { id: true, nombre: true, cargo: true, departamento: true } },
+        departamentoRef: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+    res.json(herramientas);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/herramientas', async (req, res) => {
+  const {
+    codigo, identificador, nombre, categoria, marca, modelo,
+    condicion, estado, disponibilidad, cantidad, ubicacion, departamentoId,
+    propietarioId, fechaAdquisicion, valorAdquisicion, notas, detallesAdicionales,
+  } = req.body;
+  try {
+    const herramienta = await prisma.herramienta.create({
+      data: {
+        codigo,
+        identificador: identificador || null,
+        nombre,
+        categoria,
+        marca,
+        modelo,
+        condicion: condicion || 'bueno',
+        estado: estado || 'activo',
+        disponibilidad: disponibilidad || 'disponible',
+        cantidad: cantidad ? Number(cantidad) : 1,
+        ubicacion: ubicacion || null,
+        departamentoId: departamentoId ? Number(departamentoId) : null,
+        propietarioId: propietarioId || null,
+        fechaAdquisicion: fechaAdquisicion ? new Date(fechaAdquisicion) : null,
+        valorAdquisicion: valorAdquisicion ? Number(valorAdquisicion) : null,
+        notas: notas || null,
+        detallesAdicionales: detallesAdicionales || null,
+      },
+    });
+    res.json({ id: herramienta.id });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/herramientas/:id', async (req, res) => {
+  const {
+    codigo, identificador, nombre, categoria, marca, modelo,
+    condicion, estado, disponibilidad, cantidad, ubicacion, departamentoId,
+    propietarioId, fechaAdquisicion, valorAdquisicion, notas, detallesAdicionales,
+  } = req.body;
+  const id = Number(req.params.id);
+  try {
+    await prisma.herramienta.update({
+      where: { id },
+      data: {
+        codigo,
+        identificador: identificador || null,
+        nombre,
+        categoria,
+        marca,
+        modelo,
+        condicion: condicion || 'bueno',
+        estado: estado || 'activo',
+        disponibilidad: disponibilidad || 'disponible',
+        cantidad: cantidad ? Number(cantidad) : 1,
+        ubicacion: ubicacion || null,
+        departamentoId: departamentoId ? Number(departamentoId) : null,
+        propietarioId: propietarioId || null,
+        fechaAdquisicion: fechaAdquisicion ? new Date(fechaAdquisicion) : null,
+        valorAdquisicion: valorAdquisicion ? Number(valorAdquisicion) : null,
+        notas: notas || null,
+        detallesAdicionales: detallesAdicionales || null,
+      },
+    });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/herramientas/:id', async (req, res) => {
+  try {
+    await prisma.herramienta.delete({ where: { id: Number(req.params.id) } });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── MOVIMIENTOS DE HERRAMIENTAS ───────────────────────────────────────────────
+app.get('/api/herramienta-movements', async (req, res) => {
+  try {
+    const { herramientaId, userId } = req.query;
+    const where = {};
+    if (herramientaId) where.OR = [{ herramientaId: Number(herramientaId) }, { secondaryHerramientaId: Number(herramientaId) }];
+    if (userId) where.userId = userId;
+
+    const movements = await prisma.herramientaMovement.findMany({
+      where,
+      include: {
+        herramienta: { select: { id: true, identificador: true, codigo: true, nombre: true, categoria: true, marca: true, modelo: true } },
+        secondaryHerramienta: { select: { id: true, identificador: true, codigo: true, nombre: true, categoria: true, marca: true, modelo: true } },
+        user: { select: { id: true, nombre: true, cargo: true, email: true, departamento: true } },
+        registradoPor: { select: { id: true, nombre: true, cargo: true, email: true } },
+      },
+      orderBy: { fecha: 'desc' },
+    });
+    res.json(movements);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/herramienta-movements', async (req, res) => {
+  const {
+    herramientaId, secondaryHerramientaId, userId, registradoPorId, tipo, fecha,
+    fechaRetornoPrevista, condicionEntrega, condicionRecepcion, notas,
+  } = req.body;
+  try {
+    const movement = await prisma.herramientaMovement.create({
+      data: {
+        herramientaId: Number(herramientaId),
+        secondaryHerramientaId: secondaryHerramientaId ? Number(secondaryHerramientaId) : null,
+        userId: String(userId),
+        registradoPorId: String(registradoPorId),
+        tipo,
+        fecha: fecha ? new Date(fecha) : new Date(),
+        fechaRetornoPrevista: fechaRetornoPrevista ? new Date(fechaRetornoPrevista) : null,
+        condicionEntrega: condicionEntrega || null,
+        condicionRecepcion: condicionRecepcion || null,
+        notas: notas || null,
+      },
+    });
+    res.json({ id: movement.id });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ─── MOVIMIENTOS ──────────────────────────────────────────────────────────────
 app.get('/api/movements', async (req, res) => {
   try {

@@ -48,6 +48,21 @@ export const api = {
   deleteAsset: (id: number) =>
     request(`${API_URL}/assets/${id}`, { method: 'DELETE' }),
 
+   // ─── HERRAMIENTAS ─────────────────────────────────────────────────────────
+  getHerramientas: (filters?: { categoria?: string; disponibilidad?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.categoria) params.set('categoria', filters.categoria);
+    if (filters?.disponibilidad) params.set('disponibilidad', filters.disponibilidad);
+    const qs = params.toString();
+    return request(`${API_URL}/herramientas${qs ? `?${qs}` : ''}`);
+  },
+  addHerramienta: (data: any) =>
+    request(`${API_URL}/herramientas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updateHerramienta: (id: number, data: any) =>
+    request(`${API_URL}/herramientas/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  deleteHerramienta: (id: number) =>
+    request(`${API_URL}/herramientas/${id}`, { method: 'DELETE' }),
+  
   // ─── MOVIMIENTOS ──────────────────────────────────────────────────────────
   getMovements: (filters?: { assetId?: number; userId?: string }) => {
     const params = new URLSearchParams();
@@ -59,6 +74,17 @@ export const api = {
   addMovement: (data: any) =>
     request(`${API_URL}/movements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
 
+   // ─── MOVIMIENTOS DE HERRAMIENTAS ────────────────────────────────────────────
+  getHerramientaMovements: (filters?: { herramientaId?: number; userId?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.herramientaId) params.set('herramientaId', String(filters.herramientaId));
+    if (filters?.userId) params.set('userId', filters.userId);
+    const qs = params.toString();
+    return request(`${API_URL}/herramienta-movements${qs ? `?${qs}` : ''}`);
+  },
+  addHerramientaMovement: (data: any) =>
+    request(`${API_URL}/herramienta-movements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+ 
   // ─── LÍNEAS MÓVILES ───────────────────────────────────────────────────────
   getPhoneLines: () => request(`${API_URL}/phonelines`),
   addPhoneLine: (data: any) =>
